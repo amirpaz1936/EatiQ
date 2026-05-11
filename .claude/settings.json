@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /a)",
+      "Bash(npm --version)",
+      "Bash(npx turbo *)",
+      "Bash(git mv *)",
+      "Bash(npx nest *)"
+    ]
+  }
+}
