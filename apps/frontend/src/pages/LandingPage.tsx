@@ -1,15 +1,20 @@
-import { useState, type ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { GoogleIcon } from "../components/GoogleIcon";
 import { Logo } from "../components/Logo";
 import { TextField } from "../components/TextField";
 import { AppLayout } from "../layouts/AppLayout";
+import type { User } from "../types/user";
 
 type MobileAuthTab = "login" | "register";
 
 const navButtonClass =
   "inline-flex min-h-11 min-w-[4.5rem] touch-manipulation items-center justify-center rounded-lg px-3 text-sm font-medium transition sm:px-4";
 
-export function LandingPage() {
+type LandingPageProps = {
+  onAuthenticated: (user: User) => void;
+};
+
+export function LandingPage({ onAuthenticated }: LandingPageProps) {
   const [mobileTab, setMobileTab] = useState<MobileAuthTab>("login");
 
   return (
@@ -68,14 +73,14 @@ export function LandingPage() {
               title="Login"
               className={mobileTab === "login" ? "block" : "hidden md:block"}
             >
-              <LoginForm />
+              <LoginForm onAuthenticated={onAuthenticated} />
             </AuthCard>
 
             <AuthCard
               title="Create account"
               className={mobileTab === "register" ? "block" : "hidden md:block"}
             >
-              <RegisterForm />
+              <RegisterForm onAuthenticated={onAuthenticated} />
             </AuthCard>
           </div>
         </section>
@@ -110,11 +115,25 @@ function MobileTabButton({
   );
 }
 
-function LoginForm() {
+function LoginForm({ onAuthenticated }: { onAuthenticated: (user: User) => void }) {
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    const email = String(data.get("email") ?? "").trim() || "eden@example.com";
+    const localPart = email.split("@")[0] ?? "User";
+    const name = localPart
+      .split(/[._-]/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+    onAuthenticated({ name: name || "Eden Siterkol", email });
+  }
+
   return (
-    <form className="flex flex-col gap-4" onSubmit={(e) => e.preventDefault()}>
+    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
       <TextField
         id="login-email"
+        name="email"
         label="Email"
         type="email"
         placeholder="you@example.com"
@@ -122,6 +141,7 @@ function LoginForm() {
       />
       <TextField
         id="login-password"
+        name="password"
         label="Password"
         type="password"
         placeholder="••••••••"
@@ -135,6 +155,9 @@ function LoginForm() {
       </button>
       <button
         type="button"
+        onClick={() =>
+          onAuthenticated({ name: "Eden Siterkol", email: "eden@example.com" })
+        }
         className="flex min-h-11 w-full touch-manipulation items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
       >
         <GoogleIcon />
@@ -144,25 +167,36 @@ function LoginForm() {
   );
 }
 
-function RegisterForm() {
+function RegisterForm({ onAuthenticated }: { onAuthenticated: (user: User) => void }) {
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    const name = String(data.get("name") ?? "").trim() || "Eden Siterkol";
+    const email = String(data.get("email") ?? "").trim() || "eden@example.com";
+    onAuthenticated({ name, email });
+  }
+
   return (
-    <form className="flex flex-col gap-4" onSubmit={(e) => e.preventDefault()}>
+    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
       <TextField
         id="register-name"
+        name="name"
         label="Full name"
         type="text"
-        placeholder="name"
+        placeholder="Eden S."
         autoComplete="name"
       />
       <TextField
         id="register-email"
+        name="email"
         label="Email"
         type="email"
-        placeholder="email@example.com"
+        placeholder="eden@example.com"
         autoComplete="email"
       />
       <TextField
         id="register-password"
+        name="password"
         label="Password"
         type="password"
         placeholder="Min 6 chars"

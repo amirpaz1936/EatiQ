@@ -1,6 +1,10 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # EatiQ
 
-Turborepo monorepo using **npm workspaces**.
+Turborepo monorepo using **npm workspaces**. EatiQ is a meal tracking application with image scanning and personalized nutrition recommendations.
 
 ## Layout
 
@@ -39,6 +43,31 @@ To target one workspace: `npm run dev -w @eatiq/frontend` (or `@eatiq/backend`).
 1. Create `packages/<name>/package.json` with `"name": "@eatiq/<name>"`.
 2. Run `npm install` at the root to register it.
 3. Consume it from another workspace via `"@eatiq/<name>": "*"` in that workspace's `dependencies`.
+
+## Architecture
+
+**Frontend** (`apps/frontend`):
+- React 18 + Vite 6 + TypeScript + Tailwind CSS 4
+- Client-side routing via state machine in `App.tsx` (landing ↔ dashboard)
+- Auth is currently mock/local only — forms generate user from email, no backend integration yet
+- Component structure:
+  - `components/` — reusable UI (TextField, Logo, GoogleIcon, icons.tsx)
+  - `components/dashboard/` — dashboard-specific components (StatCard, UserMenu, DashboardNav)
+  - `layouts/` — AppLayout (landing), DashboardLayout (authenticated)
+  - `pages/` — LandingPage (login/register forms), DashboardPage (calorie stats + meal history)
+  - `types/` — shared types (User)
+
+**Backend** (`apps/backend`):
+- NestJS 10 + Express
+- Currently minimal — ConfigModule (global) + sample controller/service
+- No database, auth, or API endpoints wired up yet
+
+## Development workflow
+
+- Both dev servers run concurrently via `npm run dev` from root
+- Frontend HMR on `:5173`, backend watch-reload on `:3000`
+- No proxy configured — frontend doesn't call backend yet
+- Type-check before committing: `npm run check-types`
 
 ## Environment
 
