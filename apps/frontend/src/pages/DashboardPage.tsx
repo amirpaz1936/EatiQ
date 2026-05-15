@@ -1,9 +1,6 @@
 import { CameraIcon, FlameIcon, SparklesIcon, UtensilsIcon } from "../components/icons";
 import { StatCard } from "../components/dashboard/StatCard";
-import { DashboardLayout } from "../layouts/DashboardLayout";
-import type { User } from "../types/user";
-
-const DAILY_CALORIE_TARGET = 1600;
+import { loadProfile } from "../lib/profile-storage";
 
 type Meal = {
   id: string;
@@ -44,20 +41,15 @@ const MOCK_MEALS: Meal[] = [
   },
 ];
 
-type DashboardPageProps = {
-  user: User;
-  onLogout: () => void;
-};
-
-export function DashboardPage({ user, onLogout }: DashboardPageProps) {
+export function DashboardPage() {
   const meals = MOCK_MEALS;
+  const dailyTarget = loadProfile().targetCaloriesDaily;
   const calories = meals.reduce((sum, meal) => sum + meal.calories, 0);
   const mealsLogged = meals.length;
-  const progress = Math.min(100, (calories / DAILY_CALORIE_TARGET) * 100);
+  const progress = Math.min(100, (calories / dailyTarget) * 100);
 
   return (
-    <DashboardLayout user={user} onLogout={onLogout}>
-      <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:rounded-3xl sm:p-6 lg:p-8">
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:rounded-3xl sm:p-6 lg:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
@@ -80,7 +72,7 @@ export function DashboardPage({ user, onLogout }: DashboardPageProps) {
           <StatCard
             label="Calories"
             value={calories}
-            hint={`of ${DAILY_CALORIE_TARGET} target daily`}
+            hint={`of ${dailyTarget} target daily`}
             icon={<FlameIcon />}
             accent="blue"
           />
@@ -168,7 +160,6 @@ export function DashboardPage({ user, onLogout }: DashboardPageProps) {
             </div>
           )}
         </article>
-      </section>
-    </DashboardLayout>
+    </section>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DashboardPage } from "./pages/DashboardPage";
+import { AuthenticatedApp } from "./pages/AuthenticatedApp";
 import { LandingPage } from "./pages/LandingPage";
 import type { User } from "./types/user";
 
@@ -13,12 +13,7 @@ export function App() {
   const [user, setUser] = useState<User>(defaultUser);
 
   if (screen === "dashboard") {
-    return (
-      <DashboardPage
-        user={user}
-        onLogout={() => setScreen("landing")}
-      />
-    );
+    return <AuthenticatedApp user={user} onLogout={() => setScreen("landing")} />;
   }
 
   return (
