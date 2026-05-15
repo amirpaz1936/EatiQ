@@ -1,45 +1,9 @@
+import { useState } from "react";
+import { AddFeedbackModal } from "../components/feedback/AddFeedbackModal";
 import { CameraIcon, FlameIcon, SparklesIcon, UtensilsIcon } from "../components/icons";
 import { StatCard } from "../components/dashboard/StatCard";
+import { MOCK_MEALS } from "../data/mock-meals";
 import { loadProfile } from "../lib/profile-storage";
-
-type Meal = {
-  id: string;
-  name: string;
-  calories: number;
-  time: string;
-  imageUrl?: string;
-};
-
-const MOCK_MEALS: Meal[] = [
-  {
-    id: "1",
-    name: "Avocado Toast with Eggs",
-    calories: 420,
-    time: "8:30 AM",
-    imageUrl: "🥑",
-  },
-  {
-    id: "2",
-    name: "Grilled Chicken Salad",
-    calories: 380,
-    time: "1:15 PM",
-    imageUrl: "🥗",
-  },
-  {
-    id: "3",
-    name: "Greek Yogurt & Berries",
-    calories: 150,
-    time: "3:45 PM",
-    imageUrl: "🫐",
-  },
-  {
-    id: "4",
-    name: "Salmon with Quinoa",
-    calories: 520,
-    time: "7:20 PM",
-    imageUrl: "🐟",
-  },
-];
 
 export function DashboardPage() {
   const meals = MOCK_MEALS;
@@ -48,8 +12,11 @@ export function DashboardPage() {
   const mealsLogged = meals.length;
   const progress = Math.min(100, (calories / dailyTarget) * 100);
 
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+
   return (
-    <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:rounded-3xl sm:p-6 lg:p-8">
+    <>
+      <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:rounded-3xl sm:p-6 lg:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
@@ -107,6 +74,7 @@ export function DashboardPage() {
             <div className="flex items-center gap-4 text-sm">
               <button
                 type="button"
+                onClick={() => setFeedbackOpen(true)}
                 className="font-medium text-blue-600 transition hover:text-blue-700"
               >
                 Add feedback
@@ -160,6 +128,14 @@ export function DashboardPage() {
             </div>
           )}
         </article>
-    </section>
+      </section>
+
+      <AddFeedbackModal
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        meals={meals}
+        defaultMealId={meals[0]?.id}
+      />
+    </>
   );
 }
