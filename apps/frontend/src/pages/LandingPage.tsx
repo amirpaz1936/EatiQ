@@ -119,14 +119,14 @@ function LoginForm({ onAuthenticated }: { onAuthenticated: (user: User) => void 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
-    const email = String(data.get("email") ?? "").trim() || "eden@example.com";
+    const email = String(data.get("email") ?? "").trim() || "email@example.com";
     const localPart = email.split("@")[0] ?? "User";
     const name = localPart
       .split(/[._-]/)
       .filter(Boolean)
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ");
-    onAuthenticated({ name: name || "Eden Siterkol", email });
+    onAuthenticated({ name: name || "name", email });
   }
 
   return (
@@ -156,7 +156,7 @@ function LoginForm({ onAuthenticated }: { onAuthenticated: (user: User) => void 
       <button
         type="button"
         onClick={() =>
-          onAuthenticated({ name: "Eden Siterkol", email: "eden@example.com" })
+          onAuthenticated({ name: "name", email: "email@example.com" })
         }
         className="flex min-h-11 w-full touch-manipulation items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
       >
@@ -171,8 +171,8 @@ function RegisterForm({ onAuthenticated }: { onAuthenticated: (user: User) => vo
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
-    const name = String(data.get("name") ?? "").trim() || "Eden Siterkol";
-    const email = String(data.get("email") ?? "").trim() || "eden@example.com";
+    const name = String(data.get("name") ?? "").trim();
+    const email = String(data.get("email") ?? "").trim();
     onAuthenticated({ name, email });
   }
 
@@ -183,7 +183,7 @@ function RegisterForm({ onAuthenticated }: { onAuthenticated: (user: User) => vo
         name="name"
         label="Full name"
         type="text"
-        placeholder="Eden S."
+        placeholder="name"
         autoComplete="name"
       />
       <TextField
@@ -191,7 +191,7 @@ function RegisterForm({ onAuthenticated }: { onAuthenticated: (user: User) => vo
         name="email"
         label="Email"
         type="email"
-        placeholder="eden@example.com"
+        placeholder="email@example.com"
         autoComplete="email"
       />
       <TextField

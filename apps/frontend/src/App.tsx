@@ -4,8 +4,8 @@ import { LandingPage } from "./pages/LandingPage";
 import type { User } from "./types/user";
 
 const defaultUser: User = {
-  name: "Eden Siterkol",
-  email: "eden@example.com",
+  name: "name",
+  email: "email@example.com",
 };
 
 export function App() {
