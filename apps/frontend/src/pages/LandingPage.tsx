@@ -151,14 +151,14 @@ function RegisterForm() {
         id="register-name"
         label="Full name"
         type="text"
-        placeholder="Eden S."
+        placeholder="name"
         autoComplete="name"
       />
       <TextField
         id="register-email"
         label="Email"
         type="email"
-        placeholder="eden@example.com"
+        placeholder="email@example.com"
         autoComplete="email"
       />
       <TextField
