@@ -5,14 +5,54 @@ import type { User } from "../types/user";
 
 const DAILY_CALORIE_TARGET = 1600;
 
+type Meal = {
+  id: string;
+  name: string;
+  calories: number;
+  time: string;
+  imageUrl?: string;
+};
+
+const MOCK_MEALS: Meal[] = [
+  {
+    id: "1",
+    name: "Avocado Toast with Eggs",
+    calories: 420,
+    time: "8:30 AM",
+    imageUrl: "🥑",
+  },
+  {
+    id: "2",
+    name: "Grilled Chicken Salad",
+    calories: 380,
+    time: "1:15 PM",
+    imageUrl: "🥗",
+  },
+  {
+    id: "3",
+    name: "Greek Yogurt & Berries",
+    calories: 150,
+    time: "3:45 PM",
+    imageUrl: "🫐",
+  },
+  {
+    id: "4",
+    name: "Salmon with Quinoa",
+    calories: 520,
+    time: "7:20 PM",
+    imageUrl: "🐟",
+  },
+];
+
 type DashboardPageProps = {
   user: User;
   onLogout: () => void;
 };
 
 export function DashboardPage({ user, onLogout }: DashboardPageProps) {
-  const calories = 0;
-  const mealsLogged = 0;
+  const meals = MOCK_MEALS;
+  const calories = meals.reduce((sum, meal) => sum + meal.calories, 0);
+  const mealsLogged = meals.length;
   const progress = Math.min(100, (calories / DAILY_CALORIE_TARGET) * 100);
 
   return (
@@ -88,22 +128,45 @@ export function DashboardPage({ user, onLogout }: DashboardPageProps) {
             </div>
           </div>
 
-          <div className="mt-8 flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white px-6 py-12 text-center">
-            <div className="flex size-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-              <UtensilsIcon className="size-7" />
+          {meals.length === 0 ? (
+            <div className="mt-8 flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white px-6 py-12 text-center">
+              <div className="flex size-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                <UtensilsIcon className="size-7" />
+              </div>
+              <p className="mt-4 text-sm font-medium text-slate-700">No meals logged yet</p>
+              <p className="mt-1 max-w-xs text-sm text-slate-500">
+                Scan your first meal to start tracking calories and building your history.
+              </p>
+              <button
+                type="button"
+                className="mt-5 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+              >
+                <CameraIcon className="size-4" />
+                Scan your first meal
+              </button>
             </div>
-            <p className="mt-4 text-sm font-medium text-slate-700">No meals logged yet</p>
-            <p className="mt-1 max-w-xs text-sm text-slate-500">
-              Scan your first meal to start tracking calories and building your history.
-            </p>
-            <button
-              type="button"
-              className="mt-5 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-            >
-              <CameraIcon className="size-4" />
-              Scan your first meal
-            </button>
-          </div>
+          ) : (
+            <div className="mt-6 space-y-3">
+              {meals.map((meal) => (
+                <div
+                  key={meal.id}
+                  className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-300"
+                >
+                  <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-2xl">
+                    {meal.imageUrl}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium text-slate-900">{meal.name}</h3>
+                    <p className="mt-0.5 text-xs text-slate-500">{meal.time}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-slate-900">{meal.calories}</p>
+                    <p className="text-xs text-slate-500">cal</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </article>
       </section>
     </DashboardLayout>
