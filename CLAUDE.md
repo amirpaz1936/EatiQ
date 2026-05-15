@@ -6,8 +6,9 @@ Turborepo monorepo using **npm workspaces**.
 
 ```
 apps/
-  frontend/     @eatiq/frontend — Vite 6 + React 18 + TS    (port 5173)
-  backend/      @eatiq/backend  — NestJS 10 + Express + TS  (port 3000)
+  frontend/             @eatiq/frontend           — Vite 6 + React 18 + TS    (port 5173)
+  backend/              @eatiq/backend            — NestJS 10 + Express + TS  (port 3000)
+  image-recognition/    @eatiq/image-recognition  — NestJS 10 + OpenAI Vision (port 3001)
 packages/       (empty — shared libraries go here)
 turbo.json      pipeline definitions
 tsconfig.base.json   shared strict TS compiler options
@@ -45,3 +46,8 @@ To target one workspace: `npm run dev -w @eatiq/frontend` (or `@eatiq/backend`).
 - Node ≥ 18 (developed on v22.13.1)
 - npm 10.9.2 (pinned via `packageManager` field)
 - Turbo 2.x
+
+## Commit messages
+
+- Keep commit messages to **at most two sentences**.
+- Do **not** add a Claude / Co-Authored-By signature at the bottom.
