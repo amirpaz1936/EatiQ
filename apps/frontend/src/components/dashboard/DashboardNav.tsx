@@ -2,7 +2,7 @@ import {
   CameraIcon,
   HistoryIcon,
   LayoutDashboardIcon,
-  UserIcon,
+  ProfileIcon,
 } from "../icons";
 
 export type NavItemId = "dashboard" | "scan" | "profile" | "history";
@@ -15,16 +15,17 @@ const navItems: {
 }[] = [
   { id: "dashboard", label: "Dashboard", shortLabel: "Home", icon: LayoutDashboardIcon },
   { id: "scan", label: "Scan Meal", shortLabel: "Scan", icon: CameraIcon },
-  { id: "profile", label: "Profile", shortLabel: "Profile", icon: UserIcon },
+  { id: "profile", label: "Profile", shortLabel: "Profile", icon: ProfileIcon },
   { id: "history", label: "History", shortLabel: "History", icon: HistoryIcon },
 ];
 
 type DashboardNavProps = {
   variant: "sidebar" | "bottom";
-  activeId?: NavItemId;
+  activeId: NavItemId;
+  onNavigate: (id: NavItemId) => void;
 };
 
-export function DashboardNav({ variant, activeId = "dashboard" }: DashboardNavProps) {
+export function DashboardNav({ variant, activeId, onNavigate }: DashboardNavProps) {
   if (variant === "sidebar") {
     return (
       <nav
@@ -36,7 +37,13 @@ export function DashboardNav({ variant, activeId = "dashboard" }: DashboardNavPr
         </p>
         <ul className="space-y-1">
           {navItems.map((item) => (
-            <NavButton key={item.id} item={item} active={item.id === activeId} layout="sidebar" />
+            <NavButton
+              key={item.id}
+              item={item}
+              active={item.id === activeId}
+              layout="sidebar"
+              onNavigate={onNavigate}
+            />
           ))}
         </ul>
       </nav>
@@ -47,7 +54,13 @@ export function DashboardNav({ variant, activeId = "dashboard" }: DashboardNavPr
     <nav aria-label="Main menu" className="py-1">
       <ul className="grid grid-cols-4 gap-1">
         {navItems.map((item) => (
-          <NavButton key={item.id} item={item} active={item.id === activeId} layout="bottom" />
+          <NavButton
+            key={item.id}
+            item={item}
+            active={item.id === activeId}
+            layout="bottom"
+            onNavigate={onNavigate}
+          />
         ))}
       </ul>
     </nav>
@@ -58,10 +71,12 @@ function NavButton({
   item,
   active,
   layout,
+  onNavigate,
 }: {
   item: (typeof navItems)[number];
   active: boolean;
   layout: "sidebar" | "bottom";
+  onNavigate: (id: NavItemId) => void;
 }) {
   const Icon = item.icon;
 
@@ -70,6 +85,7 @@ function NavButton({
       <li>
         <button
           type="button"
+          onClick={() => onNavigate(item.id)}
           className={`flex w-full touch-manipulation items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
             active
               ? "bg-slate-900 text-white shadow-sm"
@@ -87,6 +103,7 @@ function NavButton({
     <li>
       <button
         type="button"
+        onClick={() => onNavigate(item.id)}
         className={`flex w-full touch-manipulation flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] font-medium transition ${
           active ? "text-slate-900" : "text-slate-500"
         }`}

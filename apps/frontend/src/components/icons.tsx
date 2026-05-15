@@ -39,6 +39,27 @@ export function UserIcon({ className = "size-5" }: IconProps) {
   );
 }
 
+export function ProfileIcon({ className = "size-5" }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="10" cy="9" r="3" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M4 19c1.2-2.5 3.4-4 6-4s4.8 1.5 6 4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <circle cx="17.5" cy="16.5" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M17.5 14.8v.8M17.5 18.2v.8M15.8 16.5h-.8M19.2 16.5h-.8"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function HistoryIcon({ className = "size-5" }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
