@@ -6,9 +6,10 @@ Turborepo monorepo using **npm workspaces**.
 
 ```
 apps/
-  frontend/      @eatiq/frontend     — Vite 6 + React 18 + TS              (port 5173, host)
-  backend/       @eatiq/backend      — NestJS 10 + Express + TS            (port 3000, internal)
-  auth-service/  @eatiq/auth-service — NestJS 10 + Mongoose + MongoDB      (port 4000, internal)
+  frontend/           @eatiq/frontend          — Vite 6 + React 18 + TS              (port 5173, host)
+  backend/            @eatiq/backend           — NestJS 10 + Express + TS            (port 3000, internal)
+  auth-service/       @eatiq/auth-service      — NestJS 10 + Mongoose + MongoDB      (port 4000, internal)
+  image-recognition/  @eatiq/image-recognition — NestJS 10 + OpenAI Vision           (port 3001)
 packages/
   db/            @eatiq/db           — shared Mongoose schemas (User, …)
 infra/
@@ -137,3 +138,8 @@ If file-watcher events don't propagate on a Windows / WSL2 host, uncomment `CHOK
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | From [Google Cloud Console](https://console.cloud.google.com/) OAuth 2.0 client |
 | `GOOGLE_CALLBACK_URL` | Must match what's registered with Google. Defaults to `http://localhost:8080/auth/google/callback` |
 | `FRONTEND_URL` | Where to redirect after a successful Google callback (token appended as `?token=…`) |
+
+## Commit messages
+
+- Keep commit messages to **at most two sentences**.
+- Do **not** add a Claude / Co-Authored-By signature at the bottom.
