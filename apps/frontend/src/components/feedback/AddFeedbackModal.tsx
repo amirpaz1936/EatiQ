@@ -26,35 +26,35 @@ export function AddFeedbackModal({
   defaultMealId,
 }: AddFeedbackModalProps) {
   const initialMealId = defaultMealId ?? meals[0]?.id ?? "";
-  const [mealId, setMealId] = useState(initialMealId);
-  const [feeling, setFeeling] = useState("");
-  const [sentiment, setSentiment] = useState<Sentiment | null>(null);
-  const [symptoms, setSymptoms] = useState("");
+  const [selectedMealId, setSelectedMealId] = useState(initialMealId);
+  const [feelingDescription, setFeelingDescription] = useState("");
+  const [selectedSentiment, setSelectedSentiment] = useState<Sentiment | null>(null);
+  const [symptomsText, setSymptomsText] = useState("");
 
-  const selectedMeal = meals.find((m) => m.id === mealId) ?? meals[0];
+  const selectedMeal = meals.find((meal) => meal.id === selectedMealId) ?? meals[0];
 
   useEffect(() => {
     if (!open) return;
-    setMealId(defaultMealId ?? meals[0]?.id ?? "");
-    setFeeling("");
-    setSentiment(null);
-    setSymptoms("");
+    setSelectedMealId(defaultMealId ?? meals[0]?.id ?? "");
+    setFeelingDescription("");
+    setSelectedSentiment(null);
+    setSymptomsText("");
   }, [open, defaultMealId, meals]);
 
-  const mealOptions = meals.map((meal) => ({
+  const mealSelectOptions = meals.map((meal) => ({
     value: meal.id,
     label: `${meal.name} • ${meal.loggedAt}`,
   }));
 
-  function handleSave() {
+  function handleSaveFeedback() {
     if (!selectedMeal) return;
 
     saveFeedbackEntry({
       id: crypto.randomUUID(),
       mealId: selectedMeal.id,
-      feeling,
-      sentiment,
-      symptoms,
+      feeling: feelingDescription,
+      sentiment: selectedSentiment,
+      symptoms: symptomsText,
       createdAt: new Date().toISOString(),
     });
 
@@ -77,7 +77,7 @@ export function AddFeedbackModal({
           </button>
           <button
             type="button"
-            onClick={handleSave}
+            onClick={handleSaveFeedback}
             className="min-h-10 touch-manipulation rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
           >
             Save feedback
@@ -92,13 +92,13 @@ export function AddFeedbackModal({
           </p>
         )}
 
-        {mealOptions.length > 0 && (
+        {mealSelectOptions.length > 0 && (
           <SelectField
             id="feedback-meal"
             label="Select a meal"
-            options={mealOptions}
-            value={mealId}
-            onChange={setMealId}
+            options={mealSelectOptions}
+            value={selectedMealId}
+            onChange={setSelectedMealId}
           />
         )}
 
@@ -109,31 +109,31 @@ export function AddFeedbackModal({
           <textarea
             id="feedback-feeling"
             rows={4}
-            value={feeling}
-            onChange={(e) => setFeeling(e.target.value)}
+            value={feelingDescription}
+            onChange={(e) => setFeelingDescription(e.target.value)}
             placeholder="e.g., felt great / bloated / stomach pain / low energy"
             className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/25 sm:text-sm"
           />
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-            {SENTIMENTS.map((item) => {
-              const active = sentiment === item.value;
+            {SENTIMENTS.map((sentimentOption) => {
+              const isActive = selectedSentiment === sentimentOption.value;
               return (
                 <button
-                  key={item.value}
+                  key={sentimentOption.value}
                   type="button"
-                  onClick={() => setSentiment(item.value)}
+                  onClick={() => setSelectedSentiment(sentimentOption.value)}
                   className={`min-h-11 touch-manipulation rounded-xl border px-2 py-2.5 text-sm font-medium transition ${
-                    active
+                    isActive
                       ? "border-slate-900 bg-slate-900 text-white shadow-sm"
                       : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                   }`}
                 >
                   <span className="mr-1" aria-hidden>
-                    {item.emoji}
+                    {sentimentOption.emoji}
                   </span>
-                  {item.label}
+                  {sentimentOption.label}
                 </button>
               );
             })}
@@ -144,8 +144,8 @@ export function AddFeedbackModal({
           label="Symptoms (optional)"
           type="text"
           placeholder="e.g., bloating, cramps, nausea"
-          value={symptoms}
-          onChange={(e) => setSymptoms(e.target.value)}
+          value={symptomsText}
+          onChange={(e) => setSymptomsText(e.target.value)}
         />
       </div>
     </Modal>
