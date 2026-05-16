@@ -14,6 +14,26 @@ export function CameraIcon({ className = "size-5" }: IconProps) {
   );
 }
 
+export function UploadIcon({ className = "size-5" }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 15V4m0 0 4 4m-4-4L8 8"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function LayoutDashboardIcon({ className = "size-5" }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
