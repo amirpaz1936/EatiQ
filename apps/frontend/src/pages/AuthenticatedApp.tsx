@@ -4,6 +4,7 @@ import { DashboardLayout } from "../layouts/DashboardLayout";
 import type { User } from "../types/user";
 import { DashboardPage } from "./DashboardPage";
 import { ProfilePage } from "./ProfilePage";
+import { ScanMealPage } from "./ScanMealPage";
 
 type AuthenticatedAppProps = {
   user: User;
@@ -31,7 +32,7 @@ export function AuthenticatedApp({ user, onLogout }: AuthenticatedAppProps) {
     >
       {route === "dashboard" && <DashboardPage />}
       {route === "profile" && <ProfilePage />}
-      {route === "scan" && <PlaceholderPage title="Scan Meal" />}
+      {route === "scan" && <ScanMealPage />}
       {route === "history" && <PlaceholderPage title="History" />}
     </DashboardLayout>
   );

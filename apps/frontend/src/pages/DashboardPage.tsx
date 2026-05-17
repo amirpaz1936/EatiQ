@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AddFeedbackModal } from "../components/feedback/AddFeedbackModal";
 import { CameraIcon, FlameIcon, SparklesIcon, UtensilsIcon } from "../components/icons";
+import { ScanMealModal } from "../components/scan/ScanMealModal";
 import { StatCard } from "../components/dashboard/StatCard";
 import { MOCK_MEALS } from "../data/mock-meals";
 import { loadProfile } from "../lib/profile-storage";
@@ -13,6 +14,7 @@ export function DashboardPage() {
   const progress = Math.min(100, (calories / dailyTarget) * 100);
 
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
 
   return (
     <>
@@ -28,6 +30,7 @@ export function DashboardPage() {
           </div>
           <button
             type="button"
+            onClick={() => setScanOpen(true)}
             className="inline-flex min-h-11 shrink-0 touch-manipulation items-center justify-center gap-2 self-start rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 hover:shadow-md sm:self-auto"
           >
             <CameraIcon className="size-5" />
@@ -99,6 +102,7 @@ export function DashboardPage() {
               </p>
               <button
                 type="button"
+                onClick={() => setScanOpen(true)}
                 className="mt-5 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
               >
                 <CameraIcon className="size-4" />
@@ -136,6 +140,7 @@ export function DashboardPage() {
         meals={meals}
         defaultMealId={meals[0]?.id}
       />
+      <ScanMealModal open={scanOpen} onClose={() => setScanOpen(false)} />
     </>
   );
 }
