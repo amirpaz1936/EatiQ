@@ -1,20 +1,17 @@
 import { useState, type FormEvent, type ReactNode } from "react";
+import { ApiError } from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 import { GoogleIcon } from "../components/GoogleIcon";
 import { Logo } from "../components/Logo";
 import { TextField } from "../components/TextField";
 import { AppLayout } from "../layouts/AppLayout";
-import type { User } from "../types/user";
 
 type MobileAuthTab = "login" | "register";
 
 const navButtonClass =
   "inline-flex min-h-11 min-w-[4.5rem] touch-manipulation items-center justify-center rounded-lg px-3 text-sm font-medium transition sm:px-4";
 
-type LandingPageProps = {
-  onAuthenticated: (user: User) => void;
-};
-
-export function LandingPage({ onAuthenticated }: LandingPageProps) {
+export function LandingPage() {
   const [mobileTab, setMobileTab] = useState<MobileAuthTab>("login");
 
   return (
@@ -24,12 +21,14 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
         <nav className="hidden items-center gap-2 md:flex">
           <button
             type="button"
+            onClick={() => setMobileTab("login")}
             className={`${navButtonClass} border border-slate-200 bg-white text-slate-900 hover:bg-slate-50`}
           >
             Login
           </button>
           <button
             type="button"
+            onClick={() => setMobileTab("register")}
             className={`${navButtonClass} bg-slate-900 text-white hover:bg-slate-800`}
           >
             Register
@@ -73,14 +72,14 @@ export function LandingPage({ onAuthenticated }: LandingPageProps) {
               title="Login"
               className={mobileTab === "login" ? "block" : "hidden md:block"}
             >
-              <LoginForm onAuthenticated={onAuthenticated} />
+              <LoginForm />
             </AuthCard>
 
             <AuthCard
               title="Create account"
               className={mobileTab === "register" ? "block" : "hidden md:block"}
             >
-              <RegisterForm onAuthenticated={onAuthenticated} />
+              <RegisterForm />
             </AuthCard>
           </div>
         </section>
@@ -115,18 +114,25 @@ function MobileTabButton({
   );
 }
 
-function LoginForm({ onAuthenticated }: { onAuthenticated: (user: User) => void }) {
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+function LoginForm() {
+  const { login, loginWithGoogle } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const data = new FormData(e.currentTarget);
-    const email = String(data.get("email") ?? "").trim() || "email@example.com";
-    const localPart = email.split("@")[0] ?? "User";
-    const name = localPart
-      .split(/[._-]/)
-      .filter(Boolean)
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(" ");
-    onAuthenticated({ name: name || "name", email });
+    const email = String(data.get("email") ?? "").trim();
+    const password = String(data.get("password") ?? "");
+    setSubmitting(true);
+    try {
+      await login(email, password);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Login failed");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -138,6 +144,7 @@ function LoginForm({ onAuthenticated }: { onAuthenticated: (user: User) => void 
         type="email"
         placeholder="you@example.com"
         autoComplete="email"
+        required
       />
       <TextField
         id="login-password"
@@ -146,18 +153,23 @@ function LoginForm({ onAuthenticated }: { onAuthenticated: (user: User) => void 
         type="password"
         placeholder="••••••••"
         autoComplete="current-password"
+        required
       />
+      {error && (
+        <p className="text-sm text-rose-600" role="alert">
+          {error}
+        </p>
+      )}
       <button
         type="submit"
-        className="mt-1 min-h-11 w-full touch-manipulation rounded-lg bg-slate-900 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+        disabled={submitting}
+        className="mt-1 min-h-11 w-full touch-manipulation rounded-lg bg-slate-900 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        Login
+        {submitting ? "Logging in…" : "Login"}
       </button>
       <button
         type="button"
-        onClick={() =>
-          onAuthenticated({ name: "name", email: "email@example.com" })
-        }
+        onClick={loginWithGoogle}
         className="flex min-h-11 w-full touch-manipulation items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
       >
         <GoogleIcon />
@@ -167,13 +179,26 @@ function LoginForm({ onAuthenticated }: { onAuthenticated: (user: User) => void 
   );
 }
 
-function RegisterForm({ onAuthenticated }: { onAuthenticated: (user: User) => void }) {
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+function RegisterForm() {
+  const { register } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     const data = new FormData(e.currentTarget);
     const name = String(data.get("name") ?? "").trim();
     const email = String(data.get("email") ?? "").trim();
-    onAuthenticated({ name, email });
+    const password = String(data.get("password") ?? "");
+    setSubmitting(true);
+    try {
+      await register(name, email, password);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Registration failed");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -193,20 +218,29 @@ function RegisterForm({ onAuthenticated }: { onAuthenticated: (user: User) => vo
         type="email"
         placeholder="email@example.com"
         autoComplete="email"
+        required
       />
       <TextField
         id="register-password"
         name="password"
         label="Password"
         type="password"
-        placeholder="Min 6 chars"
+        placeholder="Min 8 chars"
         autoComplete="new-password"
+        required
+        minLength={8}
       />
+      {error && (
+        <p className="text-sm text-rose-600" role="alert">
+          {error}
+        </p>
+      )}
       <button
         type="submit"
-        className="mt-1 min-h-11 w-full touch-manipulation rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+        disabled={submitting}
+        className="mt-1 min-h-11 w-full touch-manipulation rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        Register
+        {submitting ? "Creating account…" : "Register"}
       </button>
     </form>
   );

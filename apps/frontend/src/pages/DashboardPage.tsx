@@ -1,20 +1,60 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { fetchProfile } from "../api/profile";
+import { fetchTodaysMeals, type MealRecord } from "../api/meals";
 import { AddFeedbackModal } from "../components/feedback/AddFeedbackModal";
 import { CameraIcon, FlameIcon, SparklesIcon, UtensilsIcon } from "../components/icons";
 import { ScanMealModal } from "../components/scan/ScanMealModal";
+import { ScanResultsCard } from "../components/scan/ScanResultsCard";
 import { StatCard } from "../components/dashboard/StatCard";
-import { MOCK_MEALS } from "../data/mock-meals";
-import { loadProfile } from "../lib/profile-storage";
+import { defaultProfile } from "../types/profile";
+import type { AnalysisResult } from "../api/scan";
+
+const timeFormatter = new Intl.DateTimeFormat([], {
+  hour: "numeric",
+  minute: "2-digit",
+});
 
 export function DashboardPage() {
-  const meals = MOCK_MEALS;
-  const dailyTarget = loadProfile().targetCaloriesDaily;
-  const calories = meals.reduce((sum, meal) => sum + meal.calories, 0);
+  const [meals, setMeals] = useState<MealRecord[]>([]);
+  const [dailyTarget, setDailyTarget] = useState<number>(
+    defaultProfile.targetCaloriesDaily,
+  );
+
+  const refreshMeals = useCallback(() => {
+    return fetchTodaysMeals()
+      .then(setMeals)
+      .catch(() => {
+        // keep current state on failure
+      });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchProfile()
+      .then((p) => {
+        if (!cancelled && p.targetCaloriesDaily) {
+          setDailyTarget(p.targetCaloriesDaily);
+        }
+      })
+      .catch(() => {
+        // keep default
+      });
+    refreshMeals();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshMeals]);
+
+  const calories = Math.round(
+    meals.reduce((sum, m) => sum + m.totals.calories, 0),
+  );
   const mealsLogged = meals.length;
   const progress = Math.min(100, (calories / dailyTarget) * 100);
+  const overBudget = calories > dailyTarget;
 
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [scanResult, setScanResult] = useState<AnalysisResult | null>(null);
 
   return (
     <>
@@ -42,9 +82,14 @@ export function DashboardPage() {
           <StatCard
             label="Calories"
             value={calories}
-            hint={`of ${dailyTarget} target daily`}
+            hint={
+              overBudget
+                ? `${calories - dailyTarget} over ${dailyTarget} target`
+                : `of ${dailyTarget} target daily`
+            }
             icon={<FlameIcon />}
-            accent="blue"
+            accent={overBudget ? "rose" : "blue"}
+            valueClassName={overBudget ? "text-rose-600" : undefined}
           />
           <StatCard
             label="Meals logged"
@@ -65,7 +110,11 @@ export function DashboardPage() {
         <div className="mt-4 hidden sm:block">
           <div className="h-2 overflow-hidden rounded-full bg-slate-100">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
+              className={`h-full rounded-full bg-gradient-to-r transition-all duration-500 ${
+                overBudget
+                  ? "from-rose-500 to-rose-600"
+                  : "from-blue-500 to-blue-600"
+              }`}
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -78,7 +127,8 @@ export function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setFeedbackOpen(true)}
-                className="font-medium text-blue-600 transition hover:text-blue-700"
+                disabled={meals.length === 0}
+                className="font-medium text-blue-600 transition hover:text-blue-700 disabled:cursor-not-allowed disabled:text-slate-400"
               >
                 Add feedback
               </button>
@@ -113,18 +163,22 @@ export function DashboardPage() {
             <div className="mt-6 space-y-3">
               {meals.map((meal) => (
                 <div
-                  key={meal.id}
+                  key={meal._id}
                   className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-300"
                 >
                   <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-2xl">
-                    {meal.imageUrl}
+                    🍽️
                   </div>
                   <div className="flex-1">
                     <h3 className="text-sm font-medium text-slate-900">{meal.name}</h3>
-                    <p className="mt-0.5 text-xs text-slate-500">{meal.time}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {timeFormatter.format(new Date(meal.eatenAt))}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-slate-900">{meal.calories}</p>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {Math.round(meal.totals.calories)}
+                    </p>
                     <p className="text-xs text-slate-500">cal</p>
                   </div>
                 </div>
@@ -138,9 +192,23 @@ export function DashboardPage() {
         open={feedbackOpen}
         onClose={() => setFeedbackOpen(false)}
         meals={meals}
-        defaultMealId={meals[0]?.id}
+        defaultMealId={meals[0]?._id}
       />
-      <ScanMealModal open={scanOpen} onClose={() => setScanOpen(false)} />
+      <ScanMealModal
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onResult={setScanResult}
+      />
+      {scanResult && (
+        <ScanResultsCard
+          result={scanResult}
+          onClear={() => setScanResult(null)}
+          onSaved={() => {
+            setScanResult(null);
+            void refreshMeals();
+          }}
+        />
+      )}
     </>
   );
 }

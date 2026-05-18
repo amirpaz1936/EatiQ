@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { CameraIcon, UploadIcon } from "../components/icons";
 import { ScanMealModal } from "../components/scan/ScanMealModal";
+import { ScanResultsCard } from "../components/scan/ScanResultsCard";
+import type { AnalysisResult } from "../api/scan";
 
 export function ScanMealPage() {
   const [scanOpen, setScanOpen] = useState(false);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
 
   useEffect(() => {
-    setScanOpen(true);
-  }, []);
+    if (!result) setScanOpen(true);
+  }, [result]);
 
   return (
     <>
@@ -52,7 +55,19 @@ export function ScanMealPage() {
         </div>
       </section>
 
-      <ScanMealModal open={scanOpen} onClose={() => setScanOpen(false)} />
+      {result && (
+        <ScanResultsCard
+          result={result}
+          onClear={() => setResult(null)}
+          onSaved={() => setResult(null)}
+        />
+      )}
+
+      <ScanMealModal
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onResult={setResult}
+      />
     </>
   );
 }

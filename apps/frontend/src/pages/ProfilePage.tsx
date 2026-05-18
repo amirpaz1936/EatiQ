@@ -1,13 +1,54 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { fetchProfile, updateProfile, type ProfileResponse } from "../api/profile";
 import { SelectField } from "../components/SelectField";
 import { TextAreaField } from "../components/TextAreaField";
 import { TextField } from "../components/TextField";
-import { loadProfile, saveProfile } from "../lib/profile-storage";
-import { DIET_TYPES, GOALS, type UserProfile } from "../types/profile";
+import {
+  DIET_TYPES,
+  GOALS,
+  defaultProfile,
+  type UserProfile,
+} from "../types/profile";
+
+function toFormState(p: ProfileResponse | null): UserProfile {
+  if (!p) return { ...defaultProfile };
+  return {
+    goal: p.goal ?? defaultProfile.goal,
+    heightCm: p.heightCm ?? defaultProfile.heightCm,
+    weightKg: p.weightKg ?? defaultProfile.weightKg,
+    targetCaloriesDaily:
+      p.targetCaloriesDaily ?? defaultProfile.targetCaloriesDaily,
+    dietType: p.dietType ?? defaultProfile.dietType,
+    avoid: p.avoid ?? "",
+    notes: p.notes ?? "",
+  };
+}
 
 export function ProfilePage() {
-  const [profile, setProfile] = useState<UserProfile>(() => loadProfile());
+  const [profile, setProfile] = useState<UserProfile>(() => ({
+    ...defaultProfile,
+  }));
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchProfile()
+      .then((p) => {
+        if (!cancelled) setProfile(toFormState(p));
+      })
+      .catch((err: Error) => {
+        if (!cancelled) setError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!saved) return;
@@ -19,10 +60,19 @@ export function ProfilePage() {
     setProfile((prev) => ({ ...prev, [key]: value }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    saveProfile(profile);
-    setSaved(true);
+    setError(null);
+    setSubmitting(true);
+    try {
+      const updated = await updateProfile(profile);
+      setProfile(toFormState(updated));
+      setSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -34,7 +84,7 @@ export function ProfilePage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6" aria-busy={loading}>
         <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
           <ProfileSection title="Basics">
             <SelectField
@@ -106,16 +156,22 @@ export function ProfilePage() {
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 pt-6">
-          {saved && (
+          {error && (
+            <p className="text-sm font-medium text-rose-600" role="alert">
+              {error}
+            </p>
+          )}
+          {saved && !error && (
             <p className="text-sm font-medium text-emerald-600" role="status">
               Changes saved
             </p>
           )}
           <button
             type="submit"
-            className="min-h-11 touch-manipulation rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+            disabled={submitting || loading}
+            className="min-h-11 touch-manipulation rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Save changes
+            {submitting ? "Saving…" : "Save changes"}
           </button>
         </div>
       </form>

@@ -2,7 +2,7 @@ version: "3.9"
 
 # Development stack with hot reload.
 # Bring up with: npm run docker:dev (or `docker compose -f docker-compose.dev.yml up --build`).
-# Frontend (Vite) stays on the host at :5173 — start it with `npm run dev -w @eatiq/frontend`.
+# Frontend (Vite) runs in docker at :5173 and is reachable in the browser at http://localhost:5173.
 
 # Shared base for every Node service: same image, same bind mounts, same network.
 # Each service overrides working_dir + command (and adds env_file / depends_on as needed).
@@ -42,6 +42,25 @@ services:
     working_dir: /workspace/packages/db
     command: npm run dev
 
+  frontend:
+    <<: *node-service
+    container_name: eatiq-frontend
+    env_file:
+      - ./apps/frontend/.env
+    environment:
+      # Vite reads import.meta.env.VITE_* at build/dev time. These point at the
+      # browser-facing URLs (the browser runs on the host, not inside docker),
+      # so they always use localhost regardless of where Vite itself runs.
+      VITE_API_BASE_URL: http://localhost:8080
+      # File watching across the docker bind mount is unreliable on Windows/macOS
+      # without polling. Enable it for hot reload.
+      CHOKIDAR_USEPOLLING: "true"
+    working_dir: /workspace/apps/frontend
+    # --host 0.0.0.0 makes Vite bind to all interfaces so the published port works.
+    command: npm run dev -- --host 0.0.0.0
+    ports:
+      - "5173:5173"
+
   auth-service:
     <<: *node-service
     container_name: eatiq-auth
@@ -51,7 +70,10 @@ services:
       PORT: 4000
       MONGODB_URI: mongodb://mongodb:27017/eatiq
       NODE_ENV: development
-      # CHOKIDAR_USEPOLLING: "true"   # uncomment if file events don't propagate on Windows
+      # `nest start --watch` -> `tsc --watch`. Docker bind mounts on Windows/macOS
+      # don't deliver fs events reliably, so force TS to poll.
+      TSC_WATCHFILE: DynamicPriorityPolling
+      TSC_WATCHDIRECTORY: DynamicPriorityPolling
     working_dir: /workspace/apps/auth-service
     command: *wait-for-db
     depends_on:
@@ -63,15 +85,81 @@ services:
     container_name: eatiq-backend
     env_file:
       - ./apps/backend/.env
+    # NOTE: These environment entries override values from .env so the backend
+    # uses docker-network hostnames (mongodb / minio / image-recognition).
+    # .env.example uses host-local URLs so the backend can also be run outside
+    # docker with `npm run dev -w @eatiq/backend`.
     environment:
       PORT: 3000
+      MONGODB_URI: mongodb://mongodb:27017/eatiq
       NODE_ENV: development
-      # CHOKIDAR_USEPOLLING: "true"
+      S3_INTERNAL_ENDPOINT: http://minio:9000
+      IMAGE_RECOGNITION_URL: http://image-recognition:3001
+      TSC_WATCHFILE: DynamicPriorityPolling
+      TSC_WATCHDIRECTORY: DynamicPriorityPolling
     working_dir: /workspace/apps/backend
     command: *wait-for-db
     depends_on:
       - mongodb
       - db-watch
+      - minio
+      - image-recognition
+
+  image-recognition:
+    <<: *node-service
+    container_name: eatiq-image-recognition
+    env_file:
+      - ./apps/image-recognition/.env
+    environment:
+      PORT: 3001
+      NODE_ENV: development
+      # In dev, image-recognition fetches the S3 object itself and sends it to
+      # OpenAI as a base64 data URL, because OpenAI's servers can't reach
+      # http://minio:9000 / http://localhost:9000. Production should leave this unset.
+      IMAGE_FETCH_MODE: base64
+      TSC_WATCHFILE: DynamicPriorityPolling
+      TSC_WATCHDIRECTORY: DynamicPriorityPolling
+    working_dir: /workspace/apps/image-recognition
+    command: npm run dev
+
+  minio:
+    image: minio/minio:latest
+    container_name: eatiq-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      # Allow the Vite dev origin to PUT directly to Minio with the presigned URL.
+      MINIO_API_CORS_ALLOW_ORIGIN: "http://localhost:5173"
+    ports:
+      - "9000:9000"   # S3 API (browser PUTs hit this)
+      - "9001:9001"   # Console (manual inspection at http://localhost:9001)
+    volumes:
+      - minio_data:/data
+    networks:
+      - eatiq
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot job that creates the eatiq-uploads bucket and exits.
+  minio-init:
+    image: minio/mc:latest
+    container_name: eatiq-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      (mc mb local/eatiq-uploads || true) &&
+      echo 'Minio bucket eatiq-uploads ready'
+      "
+    networks:
+      - eatiq
 
   nginx:
     image: nginx:1.27-alpine
@@ -89,6 +177,7 @@ services:
 
 volumes:
   mongo_data:
+  minio_data:
 
 networks:
   eatiq:
