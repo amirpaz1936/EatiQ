@@ -65,6 +65,7 @@ services:
       - ./apps/backend/.env
     environment:
       PORT: 3000
+      MONGODB_URI: mongodb://mongodb:27017/eatiq
       NODE_ENV: development
       # CHOKIDAR_USEPOLLING: "true"
     working_dir: /workspace/apps/backend

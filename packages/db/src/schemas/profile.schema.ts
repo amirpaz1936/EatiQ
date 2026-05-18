@@ -33,20 +33,20 @@ export class Profile {
   })
   userId!: Types.ObjectId;
 
-  @Prop({ type: String, enum: GOALS, required: true })
-  goal!: Goal;
+  @Prop({ type: String, enum: GOALS, default: null })
+  goal!: Goal | null;
 
-  @Prop({ type: Number, required: true, min: 0 })
-  heightCm!: number;
+  @Prop({ type: Number, default: null, min: 0 })
+  heightCm!: number | null;
 
-  @Prop({ type: Number, required: true, min: 0 })
-  weightKg!: number;
+  @Prop({ type: Number, default: null, min: 0 })
+  weightKg!: number | null;
 
-  @Prop({ type: Number, required: true, min: 0 })
-  targetCaloriesDaily!: number;
+  @Prop({ type: Number, default: null, min: 0 })
+  targetCaloriesDaily!: number | null;
 
-  @Prop({ type: String, enum: DIET_TYPES, required: true })
-  dietType!: DietType;
+  @Prop({ type: String, enum: DIET_TYPES, default: null })
+  dietType!: DietType | null;
 
   @Prop({ type: String, default: "" })
   avoid!: string;

@@ -1,27 +1,18 @@
-import { useState } from "react";
+import { useAuth } from "./auth/AuthContext";
 import { AuthenticatedApp } from "./pages/AuthenticatedApp";
 import { LandingPage } from "./pages/LandingPage";
-import type { User } from "./types/user";
-
-const defaultUser: User = {
-  name: "name",
-  email: "email@example.com",
-};
 
 export function App() {
-  const [screen, setScreen] = useState<"landing" | "dashboard">("landing");
-  const [user, setUser] = useState<User>(defaultUser);
+  const { user, loading, logout } = useAuth();
 
-  if (screen === "dashboard") {
-    return <AuthenticatedApp user={user} onLogout={() => setScreen("landing")} />;
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">
+        Loading…
+      </div>
+    );
   }
 
-  return (
-    <LandingPage
-      onAuthenticated={(nextUser) => {
-        setUser(nextUser);
-        setScreen("dashboard");
-      }}
-    />
-  );
+  if (!user) return <LandingPage />;
+  return <AuthenticatedApp user={user} onLogout={logout} />;
 }

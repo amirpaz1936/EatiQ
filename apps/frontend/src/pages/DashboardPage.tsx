@@ -1,14 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { fetchProfile } from "../api/profile";
 import { AddFeedbackModal } from "../components/feedback/AddFeedbackModal";
 import { CameraIcon, FlameIcon, SparklesIcon, UtensilsIcon } from "../components/icons";
 import { ScanMealModal } from "../components/scan/ScanMealModal";
 import { StatCard } from "../components/dashboard/StatCard";
 import { MOCK_MEALS } from "../data/mock-meals";
-import { loadProfile } from "../lib/profile-storage";
+import { defaultProfile } from "../types/profile";
 
 export function DashboardPage() {
   const meals = MOCK_MEALS;
-  const dailyTarget = loadProfile().targetCaloriesDaily;
+  const [dailyTarget, setDailyTarget] = useState<number>(
+    defaultProfile.targetCaloriesDaily,
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchProfile()
+      .then((p) => {
+        if (!cancelled && p.targetCaloriesDaily) {
+          setDailyTarget(p.targetCaloriesDaily);
+        }
+      })
+      .catch(() => {
+        // keep default
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const calories = meals.reduce((sum, meal) => sum + meal.calories, 0);
   const mealsLogged = meals.length;
   const progress = Math.min(100, (calories / dailyTarget) * 100);
