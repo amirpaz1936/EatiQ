@@ -1,0 +1,96 @@
+version: "3.9"
+
+# Development stack with hot reload.
+# Bring up with: npm run docker:dev (or `docker compose -f docker-compose.dev.yml up --build`).
+# Frontend (Vite) stays on the host at :5173 — start it with `npm run dev -w @eatiq/frontend`.
+
+# Shared base for every Node service: same image, same bind mounts, same network.
+# Each service overrides working_dir + command (and adds env_file / depends_on as needed).
+x-node-service: &node-service
+  build:
+    context: .
+    dockerfile: Dockerfile.dev
+  restart: unless-stopped
+  volumes:
+    - .:/workspace
+    - /workspace/node_modules
+  networks:
+    - eatiq
+
+# Tiny one-liner used by the apps to wait for @eatiq/db to emit its first dist
+# before they boot. db-watch publishes that file ~1s after starting.
+x-wait-for-db: &wait-for-db >-
+  sh -c "while [ ! -f /workspace/packages/db/dist/index.js ];
+  do echo 'Waiting for @eatiq/db dist...'; sleep 1; done && npm run dev"
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: eatiq-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - eatiq
+
+  # Keeps packages/db/dist fresh via `tsc --watch`. Apps import the compiled output.
+  db-watch:
+    <<: *node-service
+    container_name: eatiq-db-watch
+    working_dir: /workspace/packages/db
+    command: npm run dev
+
+  auth-service:
+    <<: *node-service
+    container_name: eatiq-auth
+    env_file:
+      - ./apps/auth-service/.env
+    environment:
+      PORT: 4000
+      MONGODB_URI: mongodb://mongodb:27017/eatiq
+      NODE_ENV: development
+      # CHOKIDAR_USEPOLLING: "true"   # uncomment if file events don't propagate on Windows
+    working_dir: /workspace/apps/auth-service
+    command: *wait-for-db
+    depends_on:
+      - mongodb
+      - db-watch
+
+  backend:
+    <<: *node-service
+    container_name: eatiq-backend
+    env_file:
+      - ./apps/backend/.env
+    environment:
+      PORT: 3000
+      MONGODB_URI: mongodb://mongodb:27017/eatiq
+      NODE_ENV: development
+      # CHOKIDAR_USEPOLLING: "true"
+    working_dir: /workspace/apps/backend
+    command: *wait-for-db
+    depends_on:
+      - mongodb
+      - db-watch
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: eatiq-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./infra/nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth-service
+      - backend
+    networks:
+      - eatiq
+
+volumes:
+  mongo_data:
+
+networks:
+  eatiq:
+    driver: bridge
