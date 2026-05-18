@@ -1,28 +1,53 @@
 import { useEffect, useRef, useState } from "react";
 import { CameraIcon, UploadIcon } from "../icons";
 import { Modal } from "../Modal";
+import {
+  analyzeUploadedImage,
+  requestUploadPresign,
+  uploadBlobToPresignedUrl,
+  type AnalysisResult,
+  type UploadContentType,
+} from "../../api/scan";
 
 type ScanMealModalProps = {
   open: boolean;
   onClose: () => void;
+  onResult: (result: AnalysisResult) => void;
 };
 
-export function ScanMealModal({ open, onClose }: ScanMealModalProps) {
+const ALLOWED_CONTENT_TYPES: readonly UploadContentType[] = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
+function pickContentType(blob: Blob): UploadContentType {
+  const t = blob.type as UploadContentType;
+  return ALLOWED_CONTENT_TYPES.includes(t) ? t : "image/jpeg";
+}
+
+export function ScanMealModal({ open, onClose, onResult }: ScanMealModalProps) {
   const libraryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedBlob, setSelectedBlob] = useState<Blob | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
       stopCamera();
       setPreviewUrl(null);
+      setSelectedBlob(null);
       setCameraError(null);
       setCameraOpen(false);
+      setSubmitError(null);
+      setSubmitting(false);
     }
 
     return () => stopCamera();
@@ -59,12 +84,18 @@ export function ScanMealModal({ open, onClose }: ScanMealModalProps) {
     streamRef.current = null;
   }
 
-  function handleFile(file: File | undefined) {
-    if (!file) return;
+  function setPreviewFromBlob(blob: Blob) {
+    setSelectedBlob(blob);
     setPreviewUrl((current) => {
       if (current) URL.revokeObjectURL(current);
-      return URL.createObjectURL(file);
+      return URL.createObjectURL(blob);
     });
+    setSubmitError(null);
+  }
+
+  function handleFile(file: File | undefined) {
+    if (!file) return;
+    setPreviewFromBlob(file);
     setCameraOpen(false);
     stopCamera();
   }
@@ -80,13 +111,29 @@ export function ScanMealModal({ open, onClose }: ScanMealModalProps) {
 
     canvas.toBlob((blob) => {
       if (!blob) return;
-      setPreviewUrl((current) => {
-        if (current) URL.revokeObjectURL(current);
-        return URL.createObjectURL(blob);
-      });
+      setPreviewFromBlob(blob);
       setCameraOpen(false);
       stopCamera();
     }, "image/jpeg");
+  }
+
+  async function handleSubmit() {
+    if (!selectedBlob || submitting) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const contentType = pickContentType(selectedBlob);
+      const { uploadUrl, objectKey } = await requestUploadPresign(contentType);
+      await uploadBlobToPresignedUrl(uploadUrl, selectedBlob, contentType);
+      const result = await analyzeUploadedImage(objectKey, "en");
+      onResult(result);
+      onClose();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setSubmitError(message);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -178,11 +225,16 @@ export function ScanMealModal({ open, onClose }: ScanMealModalProps) {
               alt="Selected meal preview"
               className="max-h-72 w-full rounded-xl object-cover"
             />
+            {submitError && (
+              <p className="text-sm text-rose-700">{submitError}</p>
+            )}
             <button
               type="button"
-              className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+              onClick={handleSubmit}
+              disabled={submitting || !selectedBlob}
+              className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
             >
-              Continue to scan
+              {submitting ? "Scanning…" : "Continue to scan"}
             </button>
           </div>
         )}

@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { MongooseModule } from "@nestjs/mongoose";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
+import { ImageRecognitionModule } from "./image-recognition/image-recognition.module";
 import { ProfileModule } from "./profile/profile.module";
 
 @Module({
@@ -15,6 +16,7 @@ import { ProfileModule } from "./profile/profile.module";
       }),
     }),
     ProfileModule,
+    ImageRecognitionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -3,9 +3,11 @@ import { fetchProfile } from "../api/profile";
 import { AddFeedbackModal } from "../components/feedback/AddFeedbackModal";
 import { CameraIcon, FlameIcon, SparklesIcon, UtensilsIcon } from "../components/icons";
 import { ScanMealModal } from "../components/scan/ScanMealModal";
+import { ScanResultsCard } from "../components/scan/ScanResultsCard";
 import { StatCard } from "../components/dashboard/StatCard";
 import { MOCK_MEALS } from "../data/mock-meals";
 import { defaultProfile } from "../types/profile";
+import type { AnalysisResult } from "../api/scan";
 
 export function DashboardPage() {
   const meals = MOCK_MEALS;
@@ -34,6 +36,7 @@ export function DashboardPage() {
 
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [scanResult, setScanResult] = useState<AnalysisResult | null>(null);
 
   return (
     <>
@@ -159,7 +162,17 @@ export function DashboardPage() {
         meals={meals}
         defaultMealId={meals[0]?.id}
       />
-      <ScanMealModal open={scanOpen} onClose={() => setScanOpen(false)} />
+      <ScanMealModal
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onResult={setScanResult}
+      />
+      {scanResult && (
+        <ScanResultsCard
+          result={scanResult}
+          onClear={() => setScanResult(null)}
+        />
+      )}
     </>
   );
 }

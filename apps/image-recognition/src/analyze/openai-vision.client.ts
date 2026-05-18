@@ -13,6 +13,35 @@ export interface VisionRequest {
 const truncateUrl = (url: string, max = 80): string =>
   url.length <= max ? url : `${url.slice(0, max)}...(+${url.length - max} chars)`;
 
+// Set IMAGE_FETCH_MODE=base64 in local dev so OpenAI doesn't need to reach our
+// bucket (Minio at localhost:9000 / minio:9000 isn't routable from OpenAI).
+// In production, leave unset and OpenAI fetches the URL itself.
+async function resolveImageForOpenAI(
+  imageUrl: string,
+  logger: Logger,
+  tag: string,
+): Promise<string> {
+  if (process.env.IMAGE_FETCH_MODE !== "base64") return imageUrl;
+
+  logger.log(`${tag} fetching image bytes for base64 inlining`);
+  let res: Response;
+  try {
+    res = await fetch(imageUrl);
+  } catch (err) {
+    logger.error(`${tag} fetch failed: ${err}`);
+    throw new BadGatewayException("Failed to fetch image for analysis");
+  }
+  if (!res.ok) {
+    logger.error(`${tag} fetch status=${res.status}`);
+    throw new BadGatewayException(
+      `Failed to fetch image: upstream returned ${res.status}`,
+    );
+  }
+  const buf = Buffer.from(await res.arrayBuffer());
+  const mime = res.headers.get("content-type")?.split(";")[0]?.trim() ?? "image/jpeg";
+  return `data:${mime};base64,${buf.toString("base64")}`;
+}
+
 export class OpenAIVisionClient {
   private readonly logger = new Logger(OpenAIVisionClient.name);
   private readonly client: OpenAI;
@@ -28,8 +57,11 @@ export class OpenAIVisionClient {
     const schema = buildAnalysisSchema(language);
     const tag = `[req=${requestId}]`;
 
+    const resolvedImage = await resolveImageForOpenAI(imageUrl, this.logger, tag);
+    const isDataUrl = resolvedImage.startsWith("data:");
+
     this.logger.log(
-      `${tag} -> OpenAI responses.parse model=${this.model} lang=${language} detail=high url=${truncateUrl(imageUrl)}`,
+      `${tag} -> OpenAI responses.parse model=${this.model} lang=${language} detail=high source=${isDataUrl ? "base64-inline" : "url"} url=${truncateUrl(isDataUrl ? resolvedImage.slice(0, 40) : resolvedImage)}`,
     );
 
     const startedAt = Date.now();
@@ -43,7 +75,7 @@ export class OpenAIVisionClient {
             role: "user",
             content: [
               { type: "input_text", text: buildUserText(language) },
-              { type: "input_image", image_url: imageUrl, detail: "high" },
+              { type: "input_image", image_url: resolvedImage, detail: "high" },
             ],
           },
         ],
