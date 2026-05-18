@@ -1,8 +1,15 @@
+import { useState } from "react";
 import type { AnalysisResult, NutritionTotals } from "../../api/scan";
+import {
+  deriveMealName,
+  saveMeal,
+  type MealRecord,
+} from "../../api/meals";
 
 type ScanResultsCardProps = {
   result: AnalysisResult;
   onClear: () => void;
+  onSaved?: (record: MealRecord) => void;
 };
 
 const round = (n: number) => Math.round(n);
@@ -26,8 +33,35 @@ function NutritionRow({ nutrition }: { nutrition: NutritionTotals }) {
   );
 }
 
-export function ScanResultsCard({ result, onClear }: ScanResultsCardProps) {
+export function ScanResultsCard({ result, onClear, onSaved }: ScanResultsCardProps) {
   const hasItems = result.items.length > 0;
+
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  async function handleSave() {
+    if (saving || saved) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const record = await saveMeal({
+        name: deriveMealName(result.items),
+        totals: result.totals,
+        items: result.items,
+        language: result.language,
+        notes: result.notes,
+      });
+      setSaved(true);
+      onSaved?.(record);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save meal");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const saveLabel = saved ? "Saved ✓" : saving ? "Saving…" : "Save to log";
 
   return (
     <section className="mt-6 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:rounded-3xl sm:p-8">
@@ -96,6 +130,19 @@ export function ScanResultsCard({ result, onClear }: ScanResultsCardProps) {
       {result.notes && (
         <p className="mt-4 text-xs text-slate-500">{result.notes}</p>
       )}
+
+      {saveError && (
+        <p className="mt-4 text-sm text-rose-700">{saveError}</p>
+      )}
+
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={saving || saved || !hasItems}
+        className="mt-4 w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+      >
+        {saveLabel}
+      </button>
     </section>
   );
 }

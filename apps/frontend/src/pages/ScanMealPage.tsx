@@ -56,7 +56,11 @@ export function ScanMealPage() {
       </section>
 
       {result && (
-        <ScanResultsCard result={result} onClear={() => setResult(null)} />
+        <ScanResultsCard
+          result={result}
+          onClear={() => setResult(null)}
+          onSaved={() => setResult(null)}
+        />
       )}
 
       <ScanMealModal

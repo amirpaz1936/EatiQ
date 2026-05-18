@@ -4,6 +4,7 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { ImageRecognitionModule } from "./image-recognition/image-recognition.module";
+import { MealsModule } from "./meals/meals.module";
 import { ProfileModule } from "./profile/profile.module";
 
 @Module({
@@ -17,6 +18,7 @@ import { ProfileModule } from "./profile/profile.module";
     }),
     ProfileModule,
     ImageRecognitionModule,
+    MealsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

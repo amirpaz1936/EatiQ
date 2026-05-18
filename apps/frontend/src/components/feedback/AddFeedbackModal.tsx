@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { saveFeedbackEntry } from "../../lib/feedback-storage";
-import type { Meal } from "../../types/meal";
+import type { MealRecord } from "../../api/meals";
 import type { Sentiment } from "../../types/feedback";
 import { Modal } from "../Modal";
 import { SelectField } from "../SelectField";
@@ -9,9 +9,14 @@ import { TextField } from "../TextField";
 type AddFeedbackModalProps = {
   open: boolean;
   onClose: () => void;
-  meals: Meal[];
+  meals: MealRecord[];
   defaultMealId?: string;
 };
+
+const timeFormatter = new Intl.DateTimeFormat([], {
+  hour: "numeric",
+  minute: "2-digit",
+});
 
 const SENTIMENTS: { value: Sentiment; label: string; emoji: string }[] = [
   { value: "good", label: "Good", emoji: "🤩" },
@@ -25,25 +30,25 @@ export function AddFeedbackModal({
   meals,
   defaultMealId,
 }: AddFeedbackModalProps) {
-  const initialMealId = defaultMealId ?? meals[0]?.id ?? "";
+  const initialMealId = defaultMealId ?? meals[0]?._id ?? "";
   const [selectedMealId, setSelectedMealId] = useState(initialMealId);
   const [feelingDescription, setFeelingDescription] = useState("");
   const [selectedSentiment, setSelectedSentiment] = useState<Sentiment | null>(null);
   const [symptomsText, setSymptomsText] = useState("");
 
-  const selectedMeal = meals.find((meal) => meal.id === selectedMealId) ?? meals[0];
+  const selectedMeal = meals.find((meal) => meal._id === selectedMealId) ?? meals[0];
 
   useEffect(() => {
     if (!open) return;
-    setSelectedMealId(defaultMealId ?? meals[0]?.id ?? "");
+    setSelectedMealId(defaultMealId ?? meals[0]?._id ?? "");
     setFeelingDescription("");
     setSelectedSentiment(null);
     setSymptomsText("");
   }, [open, defaultMealId, meals]);
 
   const mealSelectOptions = meals.map((meal) => ({
-    value: meal.id,
-    label: `${meal.name} • ${meal.loggedAt}`,
+    value: meal._id,
+    label: `${meal.name} • ${timeFormatter.format(new Date(meal.eatenAt))}`,
   }));
 
   function handleSaveFeedback() {
@@ -51,7 +56,7 @@ export function AddFeedbackModal({
 
     saveFeedbackEntry({
       id: crypto.randomUUID(),
-      mealId: selectedMeal.id,
+      mealId: selectedMeal._id,
       feeling: feelingDescription,
       sentiment: selectedSentiment,
       symptoms: symptomsText,
