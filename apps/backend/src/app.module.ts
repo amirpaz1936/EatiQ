@@ -7,6 +7,8 @@ import { ImageRecognitionModule } from "./image-recognition/image-recognition.mo
 import { FeedbackModule } from "./feedback/feedback.module";
 import { MealsModule } from "./meals/meals.module";
 import { ProfileModule } from "./profile/profile.module";
+import { RedisModule } from "./redis/redis.module";
+import { SuggestionsModule } from "./suggestions/suggestions.module";
 
 @Module({
   imports: [
@@ -17,10 +19,12 @@ import { ProfileModule } from "./profile/profile.module";
         uri: config.getOrThrow<string>("MONGODB_URI"),
       }),
     }),
+    RedisModule,
     ProfileModule,
     ImageRecognitionModule,
     MealsModule,
     FeedbackModule,
+    SuggestionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
