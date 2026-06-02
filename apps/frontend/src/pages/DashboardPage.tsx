@@ -54,6 +54,7 @@ export function DashboardPage() {
   const overBudget = calories > dailyTarget;
 
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackSaved, setFeedbackSaved] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [scanResult, setScanResult] = useState<AnalysisResult | null>(null);
 
@@ -129,7 +130,10 @@ export function DashboardPage() {
             <div className="flex items-center gap-4 text-sm">
               <button
                 type="button"
-                onClick={() => setFeedbackOpen(true)}
+                onClick={() => {
+                  setFeedbackSaved(false);
+                  setFeedbackOpen(true);
+                }}
                 disabled={meals.length === 0}
                 className="font-medium text-blue-600 transition hover:text-blue-700 disabled:cursor-not-allowed disabled:text-slate-400"
               >
@@ -164,6 +168,11 @@ export function DashboardPage() {
             </div>
           ) : (
             <div className="mt-6 space-y-3">
+              {feedbackSaved && (
+                <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                  Feedback saved.
+                </p>
+              )}
               {meals.map((meal) => (
                 <div
                   key={meal._id}
@@ -196,6 +205,7 @@ export function DashboardPage() {
         onClose={() => setFeedbackOpen(false)}
         meals={meals}
         defaultMealId={meals[0]?._id}
+        onSaved={() => setFeedbackSaved(true)}
       />
       <ScanMealModal
         open={scanOpen}
