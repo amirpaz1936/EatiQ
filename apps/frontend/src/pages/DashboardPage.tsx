@@ -5,6 +5,7 @@ import { AddFeedbackModal } from "../components/feedback/AddFeedbackModal";
 import { CameraIcon, FlameIcon, SparklesIcon, UtensilsIcon } from "../components/icons";
 import { ScanMealModal } from "../components/scan/ScanMealModal";
 import { ScanResultsCard } from "../components/scan/ScanResultsCard";
+import { MealSuggestionsCard } from "../components/dashboard/MealSuggestionsCard";
 import { StatCard } from "../components/dashboard/StatCard";
 import { defaultProfile } from "../types/profile";
 import type { AnalysisResult } from "../api/scan";
@@ -119,6 +120,8 @@ export function DashboardPage() {
             />
           </div>
         </div>
+
+        <MealSuggestionsCard onSaved={() => void refreshMeals()} />
 
         <article className="mt-8 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
