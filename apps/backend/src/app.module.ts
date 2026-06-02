@@ -4,6 +4,7 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { ImageRecognitionModule } from "./image-recognition/image-recognition.module";
+import { FeedbackModule } from "./feedback/feedback.module";
 import { MealsModule } from "./meals/meals.module";
 import { ProfileModule } from "./profile/profile.module";
 
@@ -19,6 +20,7 @@ import { ProfileModule } from "./profile/profile.module";
     ProfileModule,
     ImageRecognitionModule,
     MealsModule,
+    FeedbackModule,
   ],
   controllers: [AppController],
   providers: [AppService],
