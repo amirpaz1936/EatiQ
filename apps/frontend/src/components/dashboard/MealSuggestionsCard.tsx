@@ -89,6 +89,7 @@ export function MealSuggestionsCard({ onSaved }: Props) {
       )}
 
       {status === "ready" && data && (
+        // min-h-[320px] ensures equal height for cards across breakpoints (adjust as needed)
         <ul className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {data.suggestions.map((s, idx) => (
             <SuggestionTile
@@ -166,7 +167,7 @@ function SuggestionTile({
   }
 
   return (
-    <li className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4">
+    <li className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 min-h-[320px]"> {/* min-h for equal height */}
       <h3 className="text-sm font-semibold text-slate-900">{suggestion.name}</h3>
       <p className="mt-1 text-xs text-slate-500">{suggestion.description}</p>
       <div className="mt-3">
@@ -174,14 +175,17 @@ function SuggestionTile({
       </div>
       <p className="mt-3 text-xs italic text-violet-700">{suggestion.reason}</p>
       {saveError && <p className="mt-2 text-xs text-rose-700">{saveError}</p>}
-      <button
-        type="button"
-        onClick={handleSave}
-        disabled={saving || saved}
-        className="mt-3 w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-      >
-        {saved ? "Added ✓" : saving ? "Adding…" : "Add to log"}
-      </button>
+      {/* Spacer pushes button + error to the bottom */}
+      <div className="mt-auto flex flex-col">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || saved}
+          className="mt-3 w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+        >
+          {saved ? "Added ✓" : saving ? "Adding…" : "Add to log"}
+        </button>
+      </div>
     </li>
   );
 }
@@ -193,12 +197,12 @@ function LoadingState() {
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="animate-pulse rounded-2xl border border-slate-200 bg-white p-4"
+            className="animate-pulse rounded-2xl border border-slate-200 bg-white p-4 min-h-[320px] flex flex-col"
           >
             <div className="h-4 w-2/3 rounded bg-slate-200" />
             <div className="mt-2 h-3 w-full rounded bg-slate-100" />
             <div className="mt-3 h-3 w-1/2 rounded bg-slate-100" />
-            <div className="mt-4 h-8 w-full rounded-xl bg-slate-100" />
+            <div className="mt-4 h-8 w-full rounded-xl bg-slate-100 mt-auto" />
           </div>
         ))}
       </div>
