@@ -225,7 +225,7 @@ function FeedbackInsightsSection({
           Feedback insights
         </h2>
         <InfoTooltip text={INSIGHTS_TOOLTIP} />
-        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-blue-500 px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm">
+        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-200">
           <SparklesIcon className="size-3.5" />
           AI-generated
         </span>
