@@ -55,16 +55,22 @@ export class SuggestionsService implements OnModuleInit {
     userId: string,
     timeZone: string,
     language?: string,
+    refresh = false,
   ): Promise<SuggestionsResult> {
     const tz = isValidTimeZone(timeZone) ? timeZone : "UTC";
     const lang = (language ?? DEFAULT_LANGUAGE).trim() || DEFAULT_LANGUAGE;
     const slot = resolveMealSlot(tz);
     const cacheKey = `suggestions:${userId}:${slot}:${lang}`;
 
-    const cached = await this.cacheGet(cacheKey);
-    if (cached) {
-      this.logger.log(`cache hit ${cacheKey}`);
-      return cached;
+    if (refresh) {
+      await this.cacheDel(cacheKey);
+      this.logger.log(`cache invalidated ${cacheKey} — refreshing`);
+    } else {
+      const cached = await this.cacheGet(cacheKey);
+      if (cached) {
+        this.logger.log(`cache hit ${cacheKey}`);
+        return cached;
+      }
     }
 
     this.logger.log(`cache miss ${cacheKey} — generating`);
@@ -137,6 +143,14 @@ export class SuggestionsService implements OnModuleInit {
       await this.redis.set(key, JSON.stringify(value), "EX", CACHE_TTL_SECONDS);
     } catch (err) {
       this.logger.warn(`Redis SET failed for ${key}: ${(err as Error).message}`);
+    }
+  }
+
+  private async cacheDel(key: string): Promise<void> {
+    try {
+      await this.redis.del(key);
+    } catch (err) {
+      this.logger.warn(`Redis DEL failed for ${key}: ${(err as Error).message}`);
     }
   }
 }

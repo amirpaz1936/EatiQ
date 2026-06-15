@@ -22,6 +22,7 @@ export class SuggestionsController {
       userId,
       query.timeZone,
       query.language,
+      query.refresh,
     );
   }
 }

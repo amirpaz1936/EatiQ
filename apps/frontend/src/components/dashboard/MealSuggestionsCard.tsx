@@ -27,10 +27,10 @@ export function MealSuggestionsCard({ onSaved }: Props) {
   const [data, setData] = useState<SuggestionsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(() => {
+  const load = useCallback((refresh = false) => {
     setStatus("loading");
     setError(null);
-    fetchMealSuggestions()
+    fetchMealSuggestions({ refresh })
       .then((res) => {
         setData(res);
         setStatus("ready");
@@ -64,7 +64,7 @@ export function MealSuggestionsCard({ onSaved }: Props) {
         {status === "ready" && (
           <button
             type="button"
-            onClick={load}
+            onClick={() => load(true)}
             className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
           >
             Refresh
@@ -80,7 +80,7 @@ export function MealSuggestionsCard({ onSaved }: Props) {
           <p className="mt-1 text-xs text-slate-500">{error}</p>
           <button
             type="button"
-            onClick={load}
+            onClick={() => load(true)}
             className="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
           >
             Try again
