@@ -54,9 +54,6 @@ export class FeedbackInsightsService implements OnModuleInit {
     this.client = new OpenAIInsightsClient(apiKey, model);
   }
 
-  // Re-summarize a user's feedback into Profile.feedbackInsights. Intended to be
-  // called fire-and-forget after a feedback write — it must never throw into the
-  // request path, so all failures are caught and logged.
   async refresh(userId: string): Promise<void> {
     try {
       const objectId = new Types.ObjectId(userId);
@@ -122,8 +119,6 @@ export class FeedbackInsightsService implements OnModuleInit {
     }
   }
 
-  // Defensive: dedupe, lowercase, trim and cap the lists in case the model
-  // overshoots its instructions.
   private normalize(raw: Partial<Insights>): Insights {
     const clean = (arr: string[] | undefined): string[] => {
       const seen = new Set<string>();
@@ -141,8 +136,6 @@ export class FeedbackInsightsService implements OnModuleInit {
     };
   }
 
-  // Drop every cached suggestion for this user (all slots/languages) so the next
-  // request regenerates with the fresh insights instead of waiting on the TTL.
   private async invalidateSuggestions(userId: string): Promise<void> {
     const pattern = `suggestions:${userId}:*`;
     try {

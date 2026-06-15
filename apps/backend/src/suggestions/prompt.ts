@@ -33,8 +33,6 @@ export interface SuggestionUserContext {
     weightKg: number | null;
   };
   consumedCaloriesToday: number;
-  // Rolling summary of past meal feedback (see FeedbackInsightsService), used
-  // in place of feeding raw feedback rows into the prompt.
   feedbackInsights: FeedbackInsightsContext;
 }
 

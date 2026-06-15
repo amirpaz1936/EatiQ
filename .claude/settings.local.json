@@ -49,7 +49,9 @@
       "Bash(grep -E \"^\\(  [a-z-]+:$|    image:|    container_name:|    ports:|      -|    environment:|      [A-Z_]+: \\)\")",
       "Bash(docker run *)",
       "Bash(python -m json.tool)",
-      "Bash(docker volume *)"
+      "Bash(docker volume *)",
+      "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
+      "Bash(npm run *)"
     ]
   }
 }

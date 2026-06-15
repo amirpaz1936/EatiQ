@@ -1,8 +1,5 @@
 import { z } from "zod";
 
-// Structured shape the summarizer LLM must return. Mirrors Profile.feedbackInsights
-// (minus feedbackCount, which the service maintains). Lists are ingredient/food
-// names the model has generalized across the user's feedback history.
 export const insightsSchema = z.object({
   avoid: z
     .array(z.string())
@@ -22,7 +19,7 @@ export const insightsSchema = z.object({
   notes: z
     .string()
     .describe(
-      "Short free-text (max ~2 sentences) for non-ingredient patterns: meal timing, portion size, preparation, anything that doesn't fit the lists. Empty string if nothing applies.",
+      "Short free-text (max ~5 sentences) for non-ingredient patterns: meal timing, portion size, preparation, anything that doesn't fit the lists. Empty string if nothing applies.",
     ),
 });
 

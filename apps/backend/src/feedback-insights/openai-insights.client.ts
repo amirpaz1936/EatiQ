@@ -8,10 +8,6 @@ import {
   type InsightsContext,
 } from "./insights-prompt";
 
-// Summarizes meal feedback into a compact structured profile. Mirrors
-// OpenAISuggestionsClient but runs off the request path (fire-and-forget from
-// the feedback write), so failures throw plain errors for the caller to log
-// rather than HTTP exceptions.
 export class OpenAIInsightsClient {
   private readonly logger = new Logger(OpenAIInsightsClient.name);
   private readonly client: OpenAI;

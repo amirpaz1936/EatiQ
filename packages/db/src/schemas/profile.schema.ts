@@ -22,30 +22,20 @@ export const DIET_TYPES = [
 ] as const;
 export type DietType = (typeof DIET_TYPES)[number];
 
-// A rolling, LLM-maintained summary of the user's meal feedback. Updated
-// incrementally each time new feedback is recorded (see FeedbackInsightsService)
-// and fed into meal suggestions, so we never push hundreds of raw feedbacks into
-// the suggestions prompt.
 @Schema({ _id: false })
 export class FeedbackInsights {
-  // Ingredients/foods linked to bad sentiment or symptoms — never suggest.
   @Prop({ type: [String], default: [] })
   avoid!: string[];
 
-  // Ingredients/foods linked to mild discomfort — suggest sparingly.
   @Prop({ type: [String], default: [] })
   reduce!: string[];
 
-  // Ingredients/foods present in good-sentiment meals — lean into these.
   @Prop({ type: [String], default: [] })
   enjoyed!: string[];
 
-  // Short free-text for patterns that aren't ingredient-shaped (timing, portion,
-  // etc.). Kept separate from the user-authored Profile.notes.
   @Prop({ type: String, default: "" })
   notes!: string;
 
-  // How many feedbacks this summary has folded in — for logging/observability.
   @Prop({ type: Number, default: 0 })
   feedbackCount!: number;
 }
