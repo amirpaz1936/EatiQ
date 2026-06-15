@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { fetchProfile, updateProfile, type ProfileResponse } from "../api/profile";
-import { InfoIcon } from "../components/icons";
+import { InfoIcon, SparklesIcon } from "../components/icons";
 import { SelectField } from "../components/SelectField";
 import { TextAreaField } from "../components/TextAreaField";
 import { TextField } from "../components/TextField";
@@ -225,8 +225,9 @@ function FeedbackInsightsSection({
           Feedback insights
         </h2>
         <InfoTooltip text={INSIGHTS_TOOLTIP} />
-        <span className="ml-auto rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500 ring-1 ring-inset ring-slate-200">
-          Auto-generated
+        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-blue-500 px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm">
+          <SparklesIcon className="size-3.5" />
+          AI-generated
         </span>
       </div>
       <p className="mb-5 text-sm text-slate-500">
