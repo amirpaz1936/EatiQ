@@ -16,8 +16,11 @@ export type SuggestionsResponse = {
   suggestions: MealSuggestion[];
 };
 
-export function fetchMealSuggestions(): Promise<SuggestionsResponse> {
+export function fetchMealSuggestions(
+  options: { refresh?: boolean } = {},
+): Promise<SuggestionsResponse> {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   const params = new URLSearchParams({ timeZone });
+  if (options.refresh) params.set("refresh", "true");
   return apiRequest<SuggestionsResponse>(`/api/suggestions?${params.toString()}`);
 }
