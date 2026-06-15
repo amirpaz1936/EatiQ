@@ -6,11 +6,19 @@ export const SYSTEM_PROMPT = [
   "suggest exactly THREE distinct, realistic meal options for the requested meal slot.",
   "Rules:",
   "- Respect the diet type and the avoid-list strictly. Never include avoided ingredients.",
+  "- Treat ingredients flagged to avoid from past feedback as equally off-limits, and favor ingredients the user has enjoyed.",
   "- Tailor portion sizes and macros toward the user's goal and remaining daily calorie budget.",
   "- Keep meals practical and commonly available; vary them (don't suggest three near-identical dishes).",
   "- Give nutrition values for ONE serving as you describe it, using realistic food-composition values.",
   "- Write every name, description, and reason in the requested language. Echo the language and meal slot codes exactly.",
 ].join("\n");
+
+export interface FeedbackInsightsContext {
+  avoid: string[];
+  reduce: string[];
+  enjoyed: string[];
+  notes: string;
+}
 
 export interface SuggestionUserContext {
   mealSlot: MealSlot;
@@ -25,7 +33,9 @@ export interface SuggestionUserContext {
     weightKg: number | null;
   };
   consumedCaloriesToday: number;
-  recentFeedback: string[];
+  // Rolling summary of past meal feedback (see FeedbackInsightsService), used
+  // in place of feeding raw feedback rows into the prompt.
+  feedbackInsights: FeedbackInsightsContext;
 }
 
 export function buildUserText(ctx: SuggestionUserContext): string {
@@ -46,8 +56,21 @@ export function buildUserText(ctx: SuggestionUserContext): string {
   ];
 
   if (profile.notes?.trim()) lines.push(`User notes: ${profile.notes.trim()}`);
-  if (ctx.recentFeedback.length > 0) {
-    lines.push(`Recent meal feedback (consider when suggesting): ${ctx.recentFeedback.join("; ")}.`);
+
+  const fi = ctx.feedbackInsights;
+  if (fi.avoid.length > 0) {
+    lines.push(
+      `From past feedback, AVOID these (caused bad reactions): ${fi.avoid.join(", ")}.`,
+    );
+  }
+  if (fi.reduce.length > 0) {
+    lines.push(`Use sparingly (mild discomfort in the past): ${fi.reduce.join(", ")}.`);
+  }
+  if (fi.enjoyed.length > 0) {
+    lines.push(`The user has enjoyed these before — favor them: ${fi.enjoyed.join(", ")}.`);
+  }
+  if (fi.notes.trim()) {
+    lines.push(`Feedback notes: ${fi.notes.trim()}`);
   }
 
   lines.push(`Suggest 3 ${ctx.mealSlot} options now.`);

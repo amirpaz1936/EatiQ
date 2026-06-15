@@ -7,8 +7,6 @@ import {
 import { ConfigService } from "@nestjs/config";
 import { InjectModel } from "@nestjs/mongoose";
 import {
-  MealFeedback,
-  MealFeedbackDocument,
   Profile,
   ProfileDocument,
   UserMeal,
@@ -40,8 +38,6 @@ export class SuggestionsService implements OnModuleInit {
     private readonly profileModel: Model<ProfileDocument>,
     @InjectModel(UserMeal.name)
     private readonly userMealModel: Model<UserMealDocument>,
-    @InjectModel(MealFeedback.name)
-    private readonly feedbackModel: Model<MealFeedbackDocument>,
   ) {}
 
   onModuleInit(): void {
@@ -75,12 +71,12 @@ export class SuggestionsService implements OnModuleInit {
 
     this.logger.log(`cache miss ${cacheKey} — generating`);
     const objectId = new Types.ObjectId(userId);
-    const [profile, consumedCaloriesToday, recentFeedback] = await Promise.all([
+    const [profile, consumedCaloriesToday] = await Promise.all([
       this.profileModel.findOne({ userId: objectId }).lean().exec(),
       this.sumCaloriesSince(objectId, startOfDayInTimeZone(tz)),
-      this.recentFeedback(objectId),
     ]);
 
+    const insights = profile?.feedbackInsights;
     const result = await this.client.suggest({
       mealSlot: slot,
       language: lang,
@@ -94,7 +90,12 @@ export class SuggestionsService implements OnModuleInit {
         weightKg: profile?.weightKg ?? null,
       },
       consumedCaloriesToday,
-      recentFeedback,
+      feedbackInsights: {
+        avoid: insights?.avoid ?? [],
+        reduce: insights?.reduce ?? [],
+        enjoyed: insights?.enjoyed ?? [],
+        notes: insights?.notes ?? "",
+      },
     });
 
     await this.cacheSet(cacheKey, result);
@@ -110,22 +111,6 @@ export class SuggestionsService implements OnModuleInit {
       .lean()
       .exec();
     return meals.reduce((sum, m) => sum + (m.totals?.calories ?? 0), 0);
-  }
-
-  private async recentFeedback(userId: Types.ObjectId): Promise<string[]> {
-    const docs = await this.feedbackModel
-      .find({ userId })
-      .sort({ createdAt: -1 })
-      .limit(3)
-      .lean()
-      .exec();
-    return docs
-      .map((f) =>
-        [f.feeling, f.sentiment, f.symptoms]
-          .filter((v) => v && String(v).trim())
-          .join(" / "),
-      )
-      .filter((s) => s.length > 0);
   }
 
   private async cacheGet(key: string): Promise<SuggestionsResult | null> {
