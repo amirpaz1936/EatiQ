@@ -1,5 +1,9 @@
 import { apiRequest } from "./client";
-import type { DietTypeValue, GoalValue } from "../types/profile";
+import type {
+  DietTypeValue,
+  FeedbackInsights,
+  GoalValue,
+} from "../types/profile";
 
 export type ProfileResponse = {
   _id?: string;
@@ -11,6 +15,7 @@ export type ProfileResponse = {
   dietType: DietTypeValue | null;
   avoid: string;
   notes: string;
+  feedbackInsights?: FeedbackInsights;
 };
 
 export type ProfilePatch = Partial<{
