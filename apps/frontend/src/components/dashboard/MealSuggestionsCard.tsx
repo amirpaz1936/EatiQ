@@ -18,6 +18,29 @@ const slotLabels: Record<MealSlot, string> = {
   snack: "a snack",
 };
 
+function getMealEmoji(name: string) {
+  const lowerName = name.toLowerCase();
+
+  if (lowerName.includes("chicken")) return "🍗";
+  if (lowerName.includes("beef") || lowerName.includes("steak")) return "🥩";
+  if (
+    lowerName.includes("salmon") ||
+    lowerName.includes("fish") ||
+    lowerName.includes("tuna")
+  ) {
+    return "🐟";
+  }
+  if (lowerName.includes("salad")) return "🥗";
+  if (lowerName.includes("egg")) return "🥚";
+  if (lowerName.includes("yogurt")) return "🥣";
+  if (lowerName.includes("rice")) return "🍚";
+  if (lowerName.includes("soup")) return "🥣";
+  if (lowerName.includes("pasta") || lowerName.includes("noodle")) return "🍝";
+  if (lowerName.includes("fruit") || lowerName.includes("berry")) return "🍓";
+
+  return "🍽️";
+}
+
 type Props = {
   onSaved?: (record: MealRecord) => void;
 };
@@ -89,7 +112,6 @@ export function MealSuggestionsCard({ onSaved }: Props) {
       )}
 
       {status === "ready" && data && (
-        // min-h-[320px] ensures equal height for cards across breakpoints (adjust as needed)
         <ul className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {data.suggestions.map((s, idx) => (
             <SuggestionTile
@@ -167,15 +189,28 @@ function SuggestionTile({
   }
 
   return (
-    <li className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 min-h-[320px]"> {/* min-h for equal height */}
-      <h3 className="text-sm font-semibold text-slate-900">{suggestion.name}</h3>
-      <p className="mt-1 text-xs text-slate-500">{suggestion.description}</p>
-      <div className="mt-3">
+    <li className="flex min-h-[340px] flex-col rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="mb-3 flex items-center gap-3">
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-2xl">
+          {getMealEmoji(suggestion.name)}
+        </div>
+        <h3 className="text-sm font-semibold leading-snug text-slate-900">
+          {suggestion.name}
+        </h3>
+      </div>
+
+      <p className="text-xs leading-relaxed text-slate-500">{suggestion.description}</p>
+
+      <div className="mt-3 rounded-xl bg-slate-50 p-3">
         <NutritionRow nutrition={suggestion.nutrition} />
       </div>
-      <p className="mt-3 text-xs italic text-violet-700">{suggestion.reason}</p>
+
+      <p className="mt-3 text-xs italic leading-relaxed text-violet-700">
+        {suggestion.reason}
+      </p>
+
       {saveError && <p className="mt-2 text-xs text-rose-700">{saveError}</p>}
-      {/* Spacer pushes button + error to the bottom */}
+
       <div className="mt-auto flex flex-col">
         <button
           type="button"
@@ -197,12 +232,16 @@ function LoadingState() {
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="animate-pulse rounded-2xl border border-slate-200 bg-white p-4 min-h-[320px] flex flex-col"
+            className="flex min-h-[340px] animate-pulse flex-col rounded-2xl border border-slate-200 bg-white p-4"
           >
-            <div className="h-4 w-2/3 rounded bg-slate-200" />
-            <div className="mt-2 h-3 w-full rounded bg-slate-100" />
-            <div className="mt-3 h-3 w-1/2 rounded bg-slate-100" />
-            <div className="mt-4 h-8 w-full rounded-xl bg-slate-100 mt-auto" />
+            <div className="mb-3 flex items-center gap-3">
+              <div className="size-12 rounded-2xl bg-slate-100" />
+              <div className="h-4 w-2/3 rounded bg-slate-200" />
+            </div>
+            <div className="h-3 w-full rounded bg-slate-100" />
+            <div className="mt-2 h-3 w-5/6 rounded bg-slate-100" />
+            <div className="mt-3 h-16 w-full rounded-xl bg-slate-100" />
+            <div className="mt-auto h-9 w-full rounded-xl bg-slate-100" />
           </div>
         ))}
       </div>
