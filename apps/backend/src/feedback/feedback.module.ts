@@ -8,6 +8,7 @@ import {
 } from "@eatiq/db";
 import { FeedbackController } from "./feedback.controller";
 import { FeedbackService } from "./feedback.service";
+import { FeedbackInsightsModule } from "../feedback-insights/feedback-insights.module";
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { FeedbackService } from "./feedback.service";
       { name: MealFeedback.name, schema: MealFeedbackSchema },
       { name: UserMeal.name, schema: UserMealSchema },
     ]),
+    FeedbackInsightsModule,
   ],
   controllers: [FeedbackController],
   providers: [FeedbackService],

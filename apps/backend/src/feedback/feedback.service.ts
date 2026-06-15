@@ -12,6 +12,7 @@ import {
 } from "@eatiq/db";
 import { Model, Types } from "mongoose";
 import type { CreateFeedbackDto } from "./dto/create-feedback.dto";
+import { FeedbackInsightsService } from "../feedback-insights/feedback-insights.service";
 
 @Injectable()
 export class FeedbackService {
@@ -20,6 +21,7 @@ export class FeedbackService {
     private readonly feedbackModel: Model<MealFeedbackDocument>,
     @InjectModel(UserMeal.name)
     private readonly userMealModel: Model<UserMealDocument>,
+    private readonly insights: FeedbackInsightsService,
   ) {}
 
   async create(
@@ -34,12 +36,18 @@ export class FeedbackService {
       throw new ForbiddenException("Meal does not belong to this user");
     }
 
-    return this.feedbackModel.create({
+    const feedback = await this.feedbackModel.create({
       userId: new Types.ObjectId(userId),
       mealId: meal._id,
       feeling: dto.feeling?.trim() ?? "",
       sentiment: dto.sentiment ?? null,
       symptoms: dto.symptoms?.trim() ?? "",
     });
+
+    // Fold this feedback into the user's rolling insights summary in the
+    // background — never block or fail the write on the summarizer LLM.
+    void this.insights.refresh(userId);
+
+    return feedback;
   }
 }
