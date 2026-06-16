@@ -24,3 +24,11 @@ export function saveFeedback(input: CreateFeedbackInput): Promise<MealFeedbackRe
     body: input,
   });
 }
+
+export function fetchFeedbackForMeals(
+  mealIds: string[],
+): Promise<MealFeedbackRecord[]> {
+  if (mealIds.length === 0) return Promise.resolve([]);
+  const params = new URLSearchParams({ mealIds: mealIds.join(",") });
+  return apiRequest<MealFeedbackRecord[]>(`/api/feedback?${params.toString()}`);
+}

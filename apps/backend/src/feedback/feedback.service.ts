@@ -50,4 +50,21 @@ export class FeedbackService {
 
     return feedback;
   }
+
+  async listForMeals(
+    userId: string,
+    mealIds: string[],
+  ): Promise<MealFeedbackDocument[]> {
+    if (mealIds.length === 0) return [];
+    const objectIds = mealIds
+      .filter((id) => Types.ObjectId.isValid(id))
+      .map((id) => new Types.ObjectId(id));
+    return this.feedbackModel
+      .find({
+        userId: new Types.ObjectId(userId),
+        mealId: { $in: objectIds },
+      })
+      .sort({ createdAt: -1 })
+      .exec();
+  }
 }
