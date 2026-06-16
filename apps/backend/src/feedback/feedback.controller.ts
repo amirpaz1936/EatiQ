@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Get,
   Headers,
   Post,
+  Query,
   UnauthorizedException,
 } from "@nestjs/common";
 import { FeedbackService } from "./feedback.service";
@@ -19,5 +21,18 @@ export class FeedbackController {
   ) {
     if (!userId) throw new UnauthorizedException();
     return this.feedbackService.create(userId, dto);
+  }
+
+  @Get()
+  async list(
+    @Headers("x-user-id") userId: string | undefined,
+    @Query("mealIds") mealIds: string | undefined,
+  ) {
+    if (!userId) throw new UnauthorizedException();
+    const ids = (mealIds ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return this.feedbackService.listForMeals(userId, ids);
   }
 }
