@@ -78,15 +78,27 @@ export function ProfilePage() {
   return (
     <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:rounded-3xl sm:p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Profile</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          Profile
+        </h1>
         <p className="mt-1 text-sm text-slate-500 sm:text-base">
           These details are used to personalize your recommendations.
         </p>
       </div>
 
+      <div className="mb-8 grid gap-3 sm:grid-cols-3">
+        <ProfileSummaryCard icon="🎯" label="Goal" value={profile.goal.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())} />
+        <ProfileSummaryCard
+          icon="🔥"
+          label="Daily target"
+          value={`${profile.targetCaloriesDaily} kcal`}
+        />
+        <ProfileSummaryCard icon="🥗" label="Diet type" value={profile.dietType.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())} />
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-6" aria-busy={loading}>
         <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
-          <ProfileSection title="Basics">
+          <ProfileSection title="Basics" icon="🧍">
             <SelectField
               id="profile-goal"
               label="Goal"
@@ -129,7 +141,7 @@ export function ProfilePage() {
             />
           </ProfileSection>
 
-          <ProfileSection title="Preferences">
+          <ProfileSection title="Preferences" icon="🥗">
             <SelectField
               id="profile-diet"
               label="Diet type"
@@ -179,16 +191,49 @@ export function ProfilePage() {
   );
 }
 
+function ProfileSummaryCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: string;
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+      <div className="flex items-center gap-3">
+        <span className="flex size-10 items-center justify-center rounded-xl bg-white text-xl shadow-sm">
+          {icon}
+        </span>
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            {label}
+          </p>
+          <p className="mt-0.5 text-sm font-semibold text-slate-900">{value}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProfileSection({
   title,
+  icon,
   children,
 }: {
   title: string;
+  icon: string;
   children: ReactNode;
 }) {
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-      <h2 className="mb-5 text-lg font-semibold text-slate-900">{title}</h2>
+      <div className="mb-5 flex items-center gap-2">
+        <span className="flex size-9 items-center justify-center rounded-xl bg-slate-50 text-lg">
+          {icon}
+        </span>
+        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+      </div>
       <div className="flex flex-col gap-4">{children}</div>
     </article>
   );
