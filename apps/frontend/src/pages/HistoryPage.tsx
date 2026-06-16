@@ -4,7 +4,7 @@ import {
   fetchFeedbackForMeals,
   type MealFeedbackRecord,
 } from "../api/feedback";
-import { FlameIcon, HistoryIcon, UtensilsIcon } from "../components/icons";
+import { UtensilsIcon } from "../components/icons";
 import type { Sentiment } from "../types/feedback";
 
 type RangePreset = "today" | "7d" | "30d" | "90d" | "custom";
@@ -335,202 +335,155 @@ export function HistoryPage() {
   };
 
   return (
-    <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:rounded-3xl sm:p-6 lg:p-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            History
-          </h1>
-          <p className="mt-1 text-sm text-slate-500 sm:text-base">
-            Browse every meal you've logged.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-          <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-slate-50 px-4 py-2.5 text-sm">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-white text-slate-500">
-              <HistoryIcon className="size-5" />
-            </span>
-            <div className="leading-tight">
-              <p className="text-xs uppercase tracking-wide text-slate-400">In range</p>
-              <p className="font-semibold text-slate-900">
-                {filtered.length} {filtered.length === 1 ? "meal" : "meals"}
-                <span className="ml-1 font-normal text-slate-500">
-                  · {stats.totalCalories.toLocaleString()} cal
-                </span>
-              </p>
-            </div>
+    <section className="flex h-full min-h-0 flex-col gap-3 lg:h-[calc(100dvh-7rem)]">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+              History
+            </h1>
+            <p className="text-xs text-slate-500 sm:text-sm">
+              {filtered.length} {filtered.length === 1 ? "meal" : "meals"}
+              <span className="text-slate-400">
+                {" "}
+                · {stats.totalCalories.toLocaleString()} cal in range
+              </span>
+            </p>
           </div>
           <button
             type="button"
             onClick={handleExport}
             disabled={filtered.length === 0}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
           >
-            <DownloadIcon className="size-4" />
-            Export CSV
+            <DownloadIcon className="size-3.5" />
+            Export
           </button>
         </div>
+
+        {status === "ready" && filtered.length > 0 && (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <CompactStat label="Avg / day" value={stats.avgPerDay.toLocaleString()} unit="cal" tint="blue" />
+            <CompactStat label="Days" value={stats.daysTracked.toString()} unit={stats.daysTracked === 1 ? "day" : "days"} tint="emerald" />
+            <CompactStat label="Protein" value={stats.totalProtein.toLocaleString()} unit="g" tint="violet" />
+            <CompactStat
+              label="Top meal"
+              value={stats.topMeal?.name ?? "—"}
+              unit={stats.topMeal ? `× ${stats.topMeal.count}` : "no repeats"}
+              tint="amber"
+              truncate
+            />
+          </div>
+        )}
+
+        {status === "ready" && dailyCalories.length > 1 && filtered.length > 0 && (
+          <CaloriesChart data={dailyCalories} />
+        )}
       </div>
 
-      {status === "ready" && filtered.length > 0 && (
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <SummaryCard
-            label="Avg / day"
-            value={`${stats.avgPerDay.toLocaleString()}`}
-            unit="cal"
-            tint="blue"
-          />
-          <SummaryCard
-            label="Days tracked"
-            value={stats.daysTracked.toString()}
-            unit={stats.daysTracked === 1 ? "day" : "days"}
-            tint="emerald"
-          />
-          <SummaryCard
-            label="Total protein"
-            value={stats.totalProtein.toLocaleString()}
-            unit="g"
-            tint="violet"
-          />
-          <SummaryCard
-            label="Top meal"
-            value={stats.topMeal?.name ?? "—"}
-            unit={
-              stats.topMeal
-                ? `× ${stats.topMeal.count}`
-                : "no repeats"
-            }
-            tint="amber"
-            truncate
-          />
-        </div>
-      )}
-
-      {status === "ready" && dailyCalories.length > 1 && filtered.length > 0 && (
-        <CaloriesChart data={dailyCalories} />
-      )}
-
-      <div className="mt-6 space-y-3">
-        <div className="flex flex-wrap gap-2">
-          {(["today", "7d", "30d", "90d"] as const).map((p) => (
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm sm:p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap gap-1.5">
+            {(["today", "7d", "30d", "90d"] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPreset(p)}
+                className={`rounded-md border px-2.5 py-1 text-xs font-medium transition ${
+                  preset === p
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {presetLabels[p]}
+              </button>
+            ))}
             <button
-              key={p}
               type="button"
-              onClick={() => setPreset(p)}
-              className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
-                preset === p
-                  ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+              onClick={() => setPreset("custom")}
+              className={`rounded-md border px-2.5 py-1 text-xs font-medium transition ${
+                preset === "custom"
+                  ? "border-slate-900 bg-slate-900 text-white"
                   : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
               }`}
             >
-              {presetLabels[p]}
+              Custom
             </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setPreset("custom")}
-            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
-              preset === "custom"
-                ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-            }`}
+          </div>
+
+          <span className="hidden h-5 w-px bg-slate-200 sm:block" />
+
+          <select
+            value={slotFilter}
+            onChange={(e) => setSlotFilter(e.target.value as MealSlotFilter)}
+            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 focus:border-slate-400 focus:outline-none"
           >
-            Custom
-          </button>
+            <option value="all">All meals</option>
+            <option value="breakfast">Breakfast</option>
+            <option value="lunch">Lunch</option>
+            <option value="dinner">Dinner</option>
+            <option value="snack">Snack</option>
+          </select>
+
+          <select
+            value={feedbackFilter}
+            onChange={(e) => setFeedbackFilter(e.target.value as FeedbackFilter)}
+            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 focus:border-slate-400 focus:outline-none"
+          >
+            <option value="all">Any feedback</option>
+            <option value="with">With feedback</option>
+            <option value="good">😊 Good</option>
+            <option value="neutral">😐 Neutral</option>
+            <option value="bad">😞 Bad</option>
+          </select>
+
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortOrder)}
+            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 focus:border-slate-400 focus:outline-none"
+          >
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="calories-desc">Cal ↓</option>
+            <option value="calories-asc">Cal ↑</option>
+          </select>
+
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search meal or ingredient…"
+            className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none"
+          />
         </div>
 
         {preset === "custom" && (
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+            <label className="flex items-center gap-1.5 text-xs text-slate-700">
               <span className="font-medium">From</span>
               <input
                 type="date"
                 value={customFrom}
                 max={customTo}
                 onChange={(e) => setCustomFrom(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
+                className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs text-slate-900 focus:border-slate-400 focus:outline-none"
               />
             </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-1.5 text-xs text-slate-700">
               <span className="font-medium">To</span>
               <input
                 type="date"
                 value={customTo}
                 min={customFrom}
                 onChange={(e) => setCustomTo(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
+                className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs text-slate-900 focus:border-slate-400 focus:outline-none"
               />
             </label>
           </div>
         )}
-
-        <div className="flex flex-wrap gap-2">
-          {(["all", "breakfast", "lunch", "dinner", "snack"] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setSlotFilter(s)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                slotFilter === s
-                  ? "border-slate-900 bg-slate-900 text-white"
-                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {s === "all" ? "All meals" : slotLabels[s]}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
-            Feedback
-          </span>
-          {(
-            [
-              { id: "all", label: "Any" },
-              { id: "with", label: "With feedback" },
-              { id: "good", label: "😊 Good" },
-              { id: "neutral", label: "😐 Neutral" },
-              { id: "bad", label: "😞 Bad" },
-            ] as const
-          ).map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setFeedbackFilter(f.id)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                feedbackFilter === f.id
-                  ? "border-slate-900 bg-slate-900 text-white"
-                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by meal or ingredient…"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none"
-          />
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortOrder)}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 focus:border-slate-400 focus:outline-none sm:w-56"
-          >
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-            <option value="calories-desc">Calories: high to low</option>
-            <option value="calories-asc">Calories: low to high</option>
-          </select>
-        </div>
       </div>
 
-      <div className="mt-6">
+      <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm sm:p-4">
         {status === "loading" && <LoadingState />}
         {status === "error" && (
           <div className="rounded-xl border border-dashed border-rose-200 bg-rose-50/50 px-4 py-6 text-center">
@@ -540,7 +493,7 @@ export function HistoryPage() {
         )}
         {status === "ready" && groups.length === 0 && <EmptyState search={search} />}
         {status === "ready" && groups.length > 0 && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {groups.map((g) => (
               <DayGroup
                 key={g.day}
@@ -580,15 +533,15 @@ function DayGroup({
 
   return (
     <article>
-      <header className="flex items-baseline justify-between border-b border-slate-200 pb-2">
-        <h2 className="text-sm font-semibold text-slate-900">
+      <header className="sticky top-0 z-10 -mx-3 flex items-baseline justify-between border-b border-slate-200 bg-white/95 px-3 py-1.5 backdrop-blur sm:-mx-4 sm:px-4">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
           {dateFormatter.format(dayDate)}
         </h2>
-        <p className="text-xs text-slate-500">
+        <p className="text-[11px] text-slate-500">
           {meals.length} {meals.length === 1 ? "meal" : "meals"} · {totalCalories.toLocaleString()} cal
         </p>
       </header>
-      <ul className="mt-3 space-y-2">
+      <ul className="mt-1.5 space-y-1.5">
         {meals.map((meal) => (
           <MealRow
             key={meal._id}
@@ -622,33 +575,27 @@ function MealRow({
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        className="flex w-full items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-slate-300"
+        className="flex w-full items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-slate-300"
       >
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-2xl">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-slate-100 text-lg">
           {feedback ? sentimentEmoji(feedback.sentiment) : "🍽️"}
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-sm font-medium text-slate-900">{meal.name}</h3>
-          <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+          <p className="flex flex-wrap items-center gap-1 text-[11px] text-slate-500">
             <span>{timeFormatter.format(eatenAt)}</span>
             <SlotBadge slot={slot} />
-            {meal.items.length > 0 && (
-              <span>· {meal.items.length} {meal.items.length === 1 ? "item" : "items"}</span>
-            )}
             {feedback && <SentimentBadge sentiment={feedback.sentiment} />}
           </p>
         </div>
-        <div className="flex items-center gap-1 text-right">
-          <FlameIcon className="size-4 text-slate-400" />
-          <div>
-            <p className="text-sm font-semibold text-slate-900">
-              {Math.round(meal.totals.calories)}
-            </p>
-            <p className="text-xs text-slate-500">cal</p>
-          </div>
+        <div className="flex items-baseline gap-0.5 text-right">
+          <p className="text-sm font-semibold text-slate-900">
+            {Math.round(meal.totals.calories)}
+          </p>
+          <p className="text-[10px] text-slate-500">cal</p>
         </div>
         <ChevronIcon
-          className={`size-4 shrink-0 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`}
+          className={`size-3.5 shrink-0 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`}
         />
       </button>
       {expanded && (
@@ -807,7 +754,7 @@ function SlotBadge({ slot }: { slot: Exclude<MealSlotFilter, "all"> }) {
   );
 }
 
-function SummaryCard({
+function CompactStat({
   label,
   value,
   unit,
@@ -821,25 +768,23 @@ function SummaryCard({
   truncate?: boolean;
 }) {
   const tints: Record<typeof tint, string> = {
-    blue: "from-blue-50 to-white border-blue-100",
-    emerald: "from-emerald-50 to-white border-emerald-100",
-    violet: "from-violet-50 to-white border-violet-100",
-    amber: "from-amber-50 to-white border-amber-100",
+    blue: "border-blue-100 bg-blue-50/60",
+    emerald: "border-emerald-100 bg-emerald-50/60",
+    violet: "border-violet-100 bg-violet-50/60",
+    amber: "border-amber-100 bg-amber-50/60",
   };
   return (
-    <div
-      className={`rounded-2xl border bg-gradient-to-br ${tints[tint]} px-4 py-3.5`}
-    >
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+    <div className={`flex flex-col rounded-lg border px-2.5 py-1.5 ${tints[tint]}`}>
+      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
         {label}
       </p>
       <p
-        className={`mt-1 text-xl font-semibold text-slate-900 ${truncate ? "truncate" : ""}`}
+        className={`text-sm font-semibold leading-tight text-slate-900 ${truncate ? "truncate" : ""}`}
         title={truncate ? value : undefined}
       >
         {value}
       </p>
-      <p className="text-xs text-slate-500">{unit}</p>
+      <p className="text-[10px] text-slate-500">{unit}</p>
     </div>
   );
 }
@@ -847,14 +792,14 @@ function SummaryCard({
 function CaloriesChart({ data }: { data: { day: string; calories: number }[] }) {
   const max = Math.max(1, ...data.map((d) => d.calories));
   return (
-    <div className="mt-6 rounded-2xl border border-slate-200/80 bg-slate-50/40 px-4 py-4">
-      <div className="mb-2 flex items-baseline justify-between">
-        <p className="text-sm font-semibold text-slate-900">Calories by day</p>
-        <p className="text-xs text-slate-500">
+    <div className="rounded-lg border border-slate-200 bg-slate-50/40 px-3 py-2">
+      <div className="mb-1 flex items-baseline justify-between">
+        <p className="text-xs font-semibold text-slate-700">Calories by day</p>
+        <p className="text-[10px] text-slate-500">
           peak {max.toLocaleString()} cal
         </p>
       </div>
-      <div className="flex h-32 items-end gap-1">
+      <div className="flex h-14 items-end gap-1">
         {data.map((d) => {
           const heightPct = d.calories === 0 ? 0 : Math.max(4, (d.calories / max) * 100);
           const dayDate = new Date(`${d.day}T00:00:00`);
@@ -876,7 +821,7 @@ function CaloriesChart({ data }: { data: { day: string; calories: number }[] }) 
           );
         })}
       </div>
-      <div className="mt-1.5 flex justify-between text-[10px] text-slate-400">
+      <div className="mt-1 flex justify-between text-[9px] text-slate-400">
         <span>{shortDateFormatter.format(new Date(`${data[0]?.day}T00:00:00`))}</span>
         <span>
           {shortDateFormatter.format(
@@ -890,17 +835,17 @@ function CaloriesChart({ data }: { data: { day: string; calories: number }[] }) 
 
 function EmptyState({ search }: { search: string }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-6 py-12 text-center">
-      <div className="flex size-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-        <UtensilsIcon className="size-7" />
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50/50 px-6 py-8 text-center">
+      <div className="flex size-10 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+        <UtensilsIcon className="size-5" />
       </div>
-      <p className="mt-4 text-sm font-medium text-slate-700">
+      <p className="mt-2 text-sm font-medium text-slate-700">
         {search.trim() ? "No meals match your search" : "No meals in this range"}
       </p>
-      <p className="mt-1 max-w-xs text-sm text-slate-500">
+      <p className="mt-0.5 max-w-xs text-xs text-slate-500">
         {search.trim()
           ? "Try a different keyword or widen the date range."
-          : "Pick a wider date range or scan a new meal to start your history."}
+          : "Pick a wider date range or scan a new meal."}
       </p>
     </div>
   );
