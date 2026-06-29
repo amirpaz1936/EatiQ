@@ -57,17 +57,29 @@ export function DashboardPage() {
   const [feedbackSaved, setFeedbackSaved] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [scanResult, setScanResult] = useState<AnalysisResult | null>(null);
+  const [scanCompleteMessage, setScanCompleteMessage] = useState(false);
   const scanResultRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!scanResult) return;
 
-    window.setTimeout(() => {
+    setScanCompleteMessage(true);
+
+    const scrollTimer = window.setTimeout(() => {
       scanResultRef.current?.scrollIntoView({
         behavior: "smooth",
         block: "start",
       });
-    }, 100);
+    }, 700);
+
+    const messageTimer = window.setTimeout(() => {
+      setScanCompleteMessage(false);
+    }, 3500);
+
+    return () => {
+      window.clearTimeout(scrollTimer);
+      window.clearTimeout(messageTimer);
+    };
   }, [scanResult]);
 
   return (
@@ -226,11 +238,22 @@ export function DashboardPage() {
       />
       {scanResult && (
         <div ref={scanResultRef}>
+          {scanCompleteMessage && (
+            <div
+              className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-sm"
+              role="status"
+              aria-live="polite"
+            >
+              <span className="font-semibold">Analysis complete!</span>{" "}
+              Your results are ready.
+            </div>
+          )}
           <ScanResultsCard
             result={scanResult}
             onClear={() => setScanResult(null)}
             onSaved={() => {
               setScanResult(null);
+              setScanCompleteMessage(false);
               void refreshMeals();
             }}
           />
