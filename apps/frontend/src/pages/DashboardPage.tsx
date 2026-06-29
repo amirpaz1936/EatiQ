@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchProfile } from "../api/profile";
 import { fetchTodaysMeals, type MealRecord } from "../api/meals";
 import { AddFeedbackModal } from "../components/feedback/AddFeedbackModal";
@@ -57,6 +57,18 @@ export function DashboardPage() {
   const [feedbackSaved, setFeedbackSaved] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [scanResult, setScanResult] = useState<AnalysisResult | null>(null);
+  const scanResultRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!scanResult) return;
+
+    window.setTimeout(() => {
+      scanResultRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 100);
+  }, [scanResult]);
 
   return (
     <>
@@ -213,14 +225,16 @@ export function DashboardPage() {
         onResult={setScanResult}
       />
       {scanResult && (
-        <ScanResultsCard
-          result={scanResult}
-          onClear={() => setScanResult(null)}
-          onSaved={() => {
-            setScanResult(null);
-            void refreshMeals();
-          }}
-        />
+        <div ref={scanResultRef}>
+          <ScanResultsCard
+            result={scanResult}
+            onClear={() => setScanResult(null)}
+            onSaved={() => {
+              setScanResult(null);
+              void refreshMeals();
+            }}
+          />
+        </div>
       )}
     </>
   );
