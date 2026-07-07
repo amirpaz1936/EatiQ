@@ -28,6 +28,14 @@ export type UserProfile = {
   notes: string;
 };
 
+export type FeedbackInsights = {
+  avoid: string[];
+  reduce: string[];
+  enjoyed: string[];
+  notes: string;
+  feedbackCount: number;
+};
+
 export const defaultProfile: UserProfile = {
   goal: "muscle_gain",
   heightCm: 160,
