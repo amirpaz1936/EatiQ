@@ -1,13 +1,29 @@
 import { useEffect, useState } from "react";
 import { CameraIcon, UploadIcon } from "../components/icons";
 import { ScanMealModal } from "../components/scan/ScanMealModal";
+import { ScanResultsCard } from "../components/scan/ScanResultsCard";
+import type { AnalysisResult } from "../api/scan";
 
 export function ScanMealPage() {
   const [scanOpen, setScanOpen] = useState(false);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [scanCompleteMessage, setScanCompleteMessage] = useState(false);
 
   useEffect(() => {
-    setScanOpen(true);
-  }, []);
+    if (!result) setScanOpen(true);
+  }, [result]);
+
+  useEffect(() => {
+    if (!result) return;
+
+    setScanCompleteMessage(true);
+
+    const timer = window.setTimeout(() => {
+      setScanCompleteMessage(false);
+    }, 3500);
+
+    return () => window.clearTimeout(timer);
+  }, [result]);
 
   return (
     <>
@@ -52,7 +68,38 @@ export function ScanMealPage() {
         </div>
       </section>
 
-      <ScanMealModal open={scanOpen} onClose={() => setScanOpen(false)} />
+      {result && (
+        <>
+          {scanCompleteMessage && (
+            <div
+              className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-sm"
+              role="status"
+              aria-live="polite"
+            >
+              <span className="font-semibold">Analysis complete!</span>{" "}
+              Your results are ready.
+            </div>
+          )}
+
+          <ScanResultsCard
+            result={result}
+            onClear={() => {
+              setResult(null);
+              setScanCompleteMessage(false);
+            }}
+            onSaved={() => {
+              setResult(null);
+              setScanCompleteMessage(false);
+            }}
+          />
+        </>
+      )}
+
+      <ScanMealModal
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onResult={setResult}
+      />
     </>
   );
 }

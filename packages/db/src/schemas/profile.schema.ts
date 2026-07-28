@@ -22,6 +22,26 @@ export const DIET_TYPES = [
 ] as const;
 export type DietType = (typeof DIET_TYPES)[number];
 
+@Schema({ _id: false })
+export class FeedbackInsights {
+  @Prop({ type: [String], default: [] })
+  avoid!: string[];
+
+  @Prop({ type: [String], default: [] })
+  reduce!: string[];
+
+  @Prop({ type: [String], default: [] })
+  enjoyed!: string[];
+
+  @Prop({ type: String, default: "" })
+  notes!: string;
+
+  @Prop({ type: Number, default: 0 })
+  feedbackCount!: number;
+}
+export const FeedbackInsightsSchema =
+  SchemaFactory.createForClass(FeedbackInsights);
+
 @Schema({ timestamps: true })
 export class Profile {
   @Prop({
@@ -53,6 +73,9 @@ export class Profile {
 
   @Prop({ type: String, default: "" })
   notes!: string;
+
+  @Prop({ type: FeedbackInsightsSchema, default: () => ({}) })
+  feedbackInsights!: FeedbackInsights;
 }
 
 export type ProfileDocument = HydratedDocument<Profile>;

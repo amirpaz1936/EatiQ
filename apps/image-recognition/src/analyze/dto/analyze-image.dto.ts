@@ -1,7 +1,13 @@
 import { IsString, IsUrl, Length, Matches } from "class-validator";
 
 export class AnalyzeImageDto {
-  @IsUrl({ require_protocol: true, protocols: ["http", "https"] })
+  // require_tld: false lets single-segment hostnames through (e.g. http://minio:9000)
+  // so backend can pass a presigned URL that resolves on the docker network.
+  @IsUrl({
+    require_protocol: true,
+    require_tld: false,
+    protocols: ["http", "https"],
+  })
   imageUrl!: string;
 
   @IsString()

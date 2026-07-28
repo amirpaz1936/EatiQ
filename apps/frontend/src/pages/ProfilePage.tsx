@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { fetchProfile, updateProfile, type ProfileResponse } from "../api/profile";
+import { InfoIcon, SparklesIcon } from "../components/icons";
 import { SelectField } from "../components/SelectField";
 import { TextAreaField } from "../components/TextAreaField";
 import { TextField } from "../components/TextField";
@@ -7,6 +8,7 @@ import {
   DIET_TYPES,
   GOALS,
   defaultProfile,
+  type FeedbackInsights,
   type UserProfile,
 } from "../types/profile";
 
@@ -28,6 +30,7 @@ export function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile>(() => ({
     ...defaultProfile,
   }));
+  const [insights, setInsights] = useState<FeedbackInsights | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -37,7 +40,10 @@ export function ProfilePage() {
     let cancelled = false;
     fetchProfile()
       .then((p) => {
-        if (!cancelled) setProfile(toFormState(p));
+        if (!cancelled) {
+          setProfile(toFormState(p));
+          setInsights(p.feedbackInsights ?? null);
+        }
       })
       .catch((err: Error) => {
         if (!cancelled) setError(err.message);
@@ -67,6 +73,7 @@ export function ProfilePage() {
     try {
       const updated = await updateProfile(profile);
       setProfile(toFormState(updated));
+      setInsights(updated.feedbackInsights ?? null);
       setSaved(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -78,15 +85,27 @@ export function ProfilePage() {
   return (
     <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:rounded-3xl sm:p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Profile</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          Profile
+        </h1>
         <p className="mt-1 text-sm text-slate-500 sm:text-base">
           These details are used to personalize your recommendations.
         </p>
       </div>
 
+      <div className="mb-8 grid gap-3 sm:grid-cols-3">
+        <ProfileSummaryCard icon="🎯" label="Goal" value={profile.goal.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())} />
+        <ProfileSummaryCard
+          icon="🔥"
+          label="Daily target"
+          value={`${profile.targetCaloriesDaily} kcal`}
+        />
+        <ProfileSummaryCard icon="🥗" label="Diet type" value={profile.dietType.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())} />
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-6" aria-busy={loading}>
         <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
-          <ProfileSection title="Basics">
+          <ProfileSection title="Basics" icon="🧍">
             <SelectField
               id="profile-goal"
               label="Goal"
@@ -129,7 +148,7 @@ export function ProfilePage() {
             />
           </ProfileSection>
 
-          <ProfileSection title="Preferences">
+          <ProfileSection title="Preferences" icon="🥗">
             <SelectField
               id="profile-diet"
               label="Diet type"
@@ -155,6 +174,8 @@ export function ProfilePage() {
           </ProfileSection>
         </div>
 
+        <FeedbackInsightsSection insights={insights} />
+
         <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 pt-6">
           {error && (
             <p className="text-sm font-medium text-rose-600" role="alert">
@@ -179,17 +200,167 @@ export function ProfilePage() {
   );
 }
 
+function ProfileSummaryCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: string;
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+      <div className="flex items-center gap-3">
+        <span className="flex size-10 items-center justify-center rounded-xl bg-white text-xl shadow-sm">
+          {icon}
+        </span>
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            {label}
+          </p>
+          <p className="mt-0.5 text-sm font-semibold text-slate-900">{value}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProfileSection({
   title,
+  icon,
   children,
 }: {
   title: string;
+  icon: string;
   children: ReactNode;
 }) {
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-      <h2 className="mb-5 text-lg font-semibold text-slate-900">{title}</h2>
+      <div className="mb-5 flex items-center gap-2">
+        <span className="flex size-9 items-center justify-center rounded-xl bg-slate-50 text-lg">
+          {icon}
+        </span>
+        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+      </div>
       <div className="flex flex-col gap-4">{children}</div>
     </article>
+  );
+}
+
+const INSIGHTS_TOOLTIP =
+  "Patterns EatiQ learns from your meal feedback. After each feedback, we summarize which foods to avoid, ease off, or favor, and use it to tailor your suggestions. It updates automatically and isn't editable here.";
+
+function FeedbackInsightsSection({
+  insights,
+}: {
+  insights: FeedbackInsights | null;
+}) {
+  const isEmpty =
+    !insights ||
+    (insights.avoid.length === 0 &&
+      insights.reduce.length === 0 &&
+      insights.enjoyed.length === 0 &&
+      !insights.notes.trim());
+
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-5 opacity-90 sm:p-6">
+      <div className="mb-1 flex items-center gap-2">
+        <span className="flex size-9 items-center justify-center rounded-xl bg-slate-50 text-lg">
+          💡
+        </span>
+        <h2 className="text-lg font-semibold text-slate-900">
+          Feedback insights
+        </h2>
+        <InfoTooltip text={INSIGHTS_TOOLTIP} />
+        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-200">
+          <SparklesIcon className="size-3.5" />
+          AI-generated
+        </span>
+      </div>
+      <p className="mb-5 pl-11 text-sm text-slate-500">
+        Learned from your meal feedback. Read-only.
+      </p>
+
+      {isEmpty ? (
+        <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3.5 py-6 text-center text-sm text-slate-400">
+          No insights yet — they'll appear here as you give feedback on meals.
+        </p>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <ReadOnlyChips label="Avoid" items={insights.avoid} tone="rose" />
+          <ReadOnlyChips label="Ease off" items={insights.reduce} tone="amber" />
+          <ReadOnlyChips
+            label="Enjoyed"
+            items={insights.enjoyed}
+            tone="emerald"
+          />
+          {insights.notes.trim() && (
+            <div className="flex flex-col gap-1.5 sm:col-span-3">
+              <span className="text-sm font-medium text-slate-700">Notes</span>
+              <p className="w-full cursor-not-allowed rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-500">
+                {insights.notes}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </article>
+  );
+}
+
+const CHIP_TONES = {
+  rose: "bg-rose-50 text-rose-700 ring-rose-200",
+  amber: "bg-amber-50 text-amber-700 ring-amber-200",
+  emerald: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+} as const;
+
+function ReadOnlyChips({
+  label,
+  items,
+  tone,
+}: {
+  label: string;
+  items: string[];
+  tone: keyof typeof CHIP_TONES;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium text-slate-700">{label}</span>
+      <div className="flex min-h-11 flex-wrap content-start gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+        {items.length === 0 ? (
+          <span className="text-sm text-slate-400">None</span>
+        ) : (
+          items.map((item) => (
+            <span
+              key={item}
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${CHIP_TONES[tone]}`}
+            >
+              {item}
+            </span>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function InfoTooltip({ text }: { text: string }) {
+  return (
+    <span className="group relative inline-flex">
+      <button
+        type="button"
+        aria-label="About feedback insights"
+        className="flex size-5 items-center justify-center rounded-full text-slate-400 transition hover:text-slate-600 focus:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+      >
+        <InfoIcon className="size-4" />
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-0 top-full z-10 mt-2 w-64 rounded-lg bg-slate-900 px-3 py-2 text-xs leading-relaxed text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        {text}
+      </span>
+    </span>
   );
 }
