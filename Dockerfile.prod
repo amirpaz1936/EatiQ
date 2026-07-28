@@ -1,0 +1,48 @@
+# Shared production image for the Node services (auth-service, backend,
+# image-recognition). Mirrors Dockerfile.dev's "one image, each compose service
+# overrides working_dir + command" model — but here the build is baked in and the
+# services run the compiled output (`node dist/main.js`) instead of a watcher.
+
+# ---------- build stage: install everything and compile the workspaces ----------
+FROM node:22-bookworm-slim AS build
+
+# python3/make/g++ compile bcrypt's native binding (auth-service). The resulting
+# .node lands in node_modules and is copied forward, so the runtime stage stays lean.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 make g++ \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+
+# Manifests first so the install layer caches across source-only changes.
+COPY package.json package-lock.json turbo.json tsconfig.base.json ./
+COPY apps/auth-service/package.json      apps/auth-service/
+COPY apps/backend/package.json           apps/backend/
+COPY apps/frontend/package.json          apps/frontend/
+COPY apps/image-recognition/package.json apps/image-recognition/
+COPY packages/db/package.json            packages/db/
+
+RUN npm ci
+
+COPY . .
+
+# Build @eatiq/db first (via ^build), then the three runtime services. The frontend
+# is built separately in infra/nginx/Dockerfile.prod, so it's filtered out here.
+RUN npx turbo run build \
+      --filter=@eatiq/auth-service \
+      --filter=@eatiq/backend \
+      --filter=@eatiq/image-recognition
+
+# ---------- runtime stage: same base, no build toolchain ----------
+FROM node:22-bookworm-slim AS runtime
+
+ENV NODE_ENV=production
+WORKDIR /workspace
+
+# The whole built workspace, including the hoisted node_modules (with bcrypt's
+# prebuilt binding) and every workspace's dist. Each compose service sets its own
+# working_dir (e.g. /workspace/apps/backend) and runs `node dist/main.js`.
+COPY --from=build /workspace ./
+
+# Default command; overridden per-service in docker-compose.prod.yml.
+CMD ["node", "apps/backend/dist/main.js"]
