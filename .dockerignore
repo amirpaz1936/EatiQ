@@ -1,0 +1,27 @@
+# Keep build contexts small and never bake host artifacts / secrets into images.
+# The images run `npm ci` + build themselves, so host node_modules/dist are noise.
+node_modules
+**/node_modules
+dist
+**/dist
+.turbo
+**/.turbo
+*.tsbuildinfo
+
+.git
+.gitignore
+
+# Secrets — env files are provided at runtime via compose, never copied into the image.
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+!.env.prod.example
+
+# Local tooling / docs that don't belong in an image
+.claude
+*.log
+README.md
+Dockerfile.dev
+docker-compose.dev.yml

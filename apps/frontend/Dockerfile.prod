@@ -1,0 +1,34 @@
+# Builds the production SPA bundle and publishes it to a bind-mounted host
+# directory (the host nginx web root). One-shot — run with:
+#   npm run docker:prod:frontend
+# The host nginx (infra/nginx/eatiq.host.conf) serves the result over HTTPS.
+
+# ---------- build stage: produce apps/frontend/dist ----------
+FROM node:22-bookworm-slim AS build
+
+WORKDIR /workspace
+
+# Manifests first for a cacheable install layer.
+COPY package.json package-lock.json ./
+COPY apps/auth-service/package.json      apps/auth-service/
+COPY apps/backend/package.json           apps/backend/
+COPY apps/frontend/package.json          apps/frontend/
+COPY apps/image-recognition/package.json apps/image-recognition/
+COPY packages/db/package.json            packages/db/
+
+RUN npm ci
+
+COPY . .
+
+# Vite inlines import.meta.env.VITE_* at build time. In prod the SPA is served from
+# the same https origin as the API, so this points back at the domain.
+ARG VITE_API_BASE_URL=https://eatiq.cs.colman.ac.il
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
+RUN npm run build -w @eatiq/frontend
+
+# ---------- exporter: copy the built assets to the mounted host web root ----------
+FROM alpine:3.20
+COPY --from=build /workspace/apps/frontend/dist /app/dist
+# /out is bind-mounted to the host nginx web root (FRONTEND_DIST_DIR).
+CMD ["sh", "-c", "rm -rf /out/* && cp -a /app/dist/. /out/ && echo 'SPA published to /out'"]
