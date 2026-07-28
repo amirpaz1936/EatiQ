@@ -1,0 +1,122 @@
+# Production app stack for eatiq.cs.colman.ac.il.
+#
+# The VM HOST already runs nginx (TLS + serving) and MongoDB, so this stack only
+# runs the app processes:
+#   - TLS / SPA / routing  -> host nginx  (see infra/nginx/eatiq.host.conf)
+#   - database             -> host mongod (via host.docker.internal)
+#   - object storage       -> Cloudflare R2 (S3-compatible), presigned direct
+#   - backend + auth       -> published on 127.0.0.1 so the host nginx can proxy them
+#   - image-recognition + redis -> internal to the docker network only
+#
+# Bring up with:  npm run docker:prod       (backend, auth, image-recognition, redis)
+# Publish the SPA: npm run docker:prod:frontend  (writes the build to the host web root)
+# Secrets come from .env.prod (copy it from .env.prod.example first).
+
+# Shared image for the Node services. Built once, reused by each service, which
+# overrides working_dir + command.
+x-node-service: &node-service
+  image: eatiq/app:prod
+  build:
+    context: .
+    dockerfile: Dockerfile.prod
+  restart: unless-stopped
+  networks:
+    - eatiq
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: eatiq-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - eatiq
+
+  auth-service:
+    <<: *node-service
+    container_name: eatiq-auth
+    working_dir: /workspace/apps/auth-service
+    command: node dist/main.js
+    # Lets MONGODB_URI reach the host's mongod at host.docker.internal.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      PORT: 4000
+      NODE_ENV: production
+      # Defaults to the host's MongoDB. Override in .env.prod if it lives elsewhere.
+      MONGODB_URI: ${MONGODB_URI:-mongodb://host.docker.internal:27017/eatiq}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env.prod}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALLBACK_URL: https://eatiq.cs.colman.ac.il/auth/google/callback
+      FRONTEND_URL: https://eatiq.cs.colman.ac.il
+    # Loopback-only: reachable by the host nginx, not from the network.
+    ports:
+      - "127.0.0.1:4000:4000"
+
+  backend:
+    <<: *node-service
+    container_name: eatiq-backend
+    working_dir: /workspace/apps/backend
+    command: node dist/main.js
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      MONGODB_URI: ${MONGODB_URI:-mongodb://host.docker.internal:27017/eatiq}
+      REDIS_URL: redis://redis:6379
+      IMAGE_RECOGNITION_URL: http://image-recognition:3001
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY in .env.prod}
+      OPENAI_SUGGESTIONS_MODEL: ${OPENAI_SUGGESTIONS_MODEL:-gpt-4o-mini}
+      OPENAI_INSIGHTS_MODEL: ${OPENAI_INSIGHTS_MODEL:-gpt-4o-mini}
+      # Cloudflare R2 (S3-compatible). Path-style + bucket name -> the browser PUTs
+      # and OpenAI GETs presigned URLs directly against R2 over https.
+      S3_BUCKET: ${R2_BUCKET:-eatiq-uploads}
+      S3_REGION: auto
+      S3_ACCESS_KEY: ${R2_ACCESS_KEY:?set R2_ACCESS_KEY in .env.prod}
+      S3_SECRET_KEY: ${R2_SECRET_KEY:?set R2_SECRET_KEY in .env.prod}
+      S3_PUBLIC_ENDPOINT: ${R2_ENDPOINT:-https://5d398f1808bdc3fc022c13c1eac22c74.r2.cloudflarestorage.com}
+      S3_INTERNAL_ENDPOINT: ${R2_ENDPOINT:-https://5d398f1808bdc3fc022c13c1eac22c74.r2.cloudflarestorage.com}
+    depends_on:
+      - redis
+      - image-recognition
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  image-recognition:
+    <<: *node-service
+    container_name: eatiq-image-recognition
+    working_dir: /workspace/apps/image-recognition
+    command: node dist/main.js
+    environment:
+      PORT: 3001
+      NODE_ENV: production
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY in .env.prod}
+      OPENAI_VISION_MODEL: ${OPENAI_VISION_MODEL:-gpt-4o-mini}
+      # Unset in prod: pass the presigned R2 URL straight to OpenAI (OpenAI fetches it).
+
+  # One-shot builder: compiles the SPA and copies it to the host nginx web root
+  # (FRONTEND_DIST_DIR). Excluded from the default `up` via the "frontend" profile;
+  # run it with `npm run docker:prod:frontend` on deploy and after frontend changes.
+  frontend-build:
+    image: eatiq/frontend-build:prod
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile.prod
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://eatiq.cs.colman.ac.il}
+    profiles:
+      - frontend
+    restart: "no"
+    volumes:
+      - ${FRONTEND_DIST_DIR:-/var/www/eatiq}:/out
+
+volumes:
+  redis_data:
+
+networks:
+  eatiq:
+    driver: bridge
