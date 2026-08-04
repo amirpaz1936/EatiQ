@@ -791,31 +791,39 @@ function CompactStat({
 
 function CaloriesChart({ data }: { data: { day: string; calories: number }[] }) {
   const max = Math.max(1, ...data.map((d) => d.calories));
+  const hasAnyCalories = data.some((d) => d.calories > 0);
+
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50/40 px-3 py-2">
       <div className="mb-1 flex items-baseline justify-between">
         <p className="text-xs font-semibold text-slate-700">Calories by day</p>
         <p className="text-[10px] text-slate-500">
-          peak {max.toLocaleString()} cal
+          {hasAnyCalories
+            ? `peak ${max.toLocaleString()} cal`
+            : "no calories in range"}
         </p>
       </div>
-      <div className="flex h-14 items-end gap-1">
+      {/* Columns need a real height so % bar heights don't collapse to 0. */}
+      <div className="flex h-16 items-stretch gap-1">
         {data.map((d) => {
-          const heightPct = d.calories === 0 ? 0 : Math.max(4, (d.calories / max) * 100);
+          const heightPct =
+            d.calories === 0 ? 0 : Math.max(8, (d.calories / max) * 100);
           const dayDate = new Date(`${d.day}T00:00:00`);
+          const label = `${shortDateFormatter.format(dayDate)} · ${d.calories.toLocaleString()} cal`;
           return (
             <div
               key={d.day}
-              className="group relative flex flex-1 flex-col items-center justify-end"
-              title={`${shortDateFormatter.format(dayDate)} · ${d.calories.toLocaleString()} cal`}
+              className="group relative flex min-w-0 flex-1 flex-col justify-end"
+              title={label}
             >
               <div
-                className={`w-full rounded-t-md transition-all ${
+                className={`w-full rounded-t-sm transition-all ${
                   d.calories === 0
-                    ? "bg-slate-200"
+                    ? "h-0.5 bg-slate-200"
                     : "bg-gradient-to-t from-blue-500 to-blue-400"
                 }`}
-                style={{ height: `${heightPct}%` }}
+                style={d.calories === 0 ? undefined : { height: `${heightPct}%` }}
+                aria-label={label}
               />
             </div>
           );
