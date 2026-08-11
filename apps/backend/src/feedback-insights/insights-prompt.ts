@@ -11,7 +11,9 @@ export const SYSTEM_PROMPT = [
   "- RECENT FEEDBACK is authoritative: it lists each meal's latest feedback, already replacing any earlier feedback the user edited or corrected. Where it disagrees with the current summary, the recent feedback wins.",
   "- If an entry in the current summary rests only on a meal that now appears in RECENT FEEDBACK without that problem, remove the entry. Corrections must be able to shrink the lists, not only grow them.",
   "- If an ingredient appears in both good and bad meals, prefer caution: keep it out of `enjoyed` and consider `reduce`.",
-  "- Keep each list deduplicated, lowercase, and concise (at most 20 entries). Use `notes` only for patterns that aren't about a specific ingredient.",
+  "- Keep each list deduplicated, lowercase, and concise (at most 20 entries).",
+  "- Always fill in `notes` when there is any feedback: 1-3 sentences summarizing the overall picture for the user — the clearest pattern so far, how strong the evidence is, and anything the lists cannot capture (meal timing, portion size, preparation, how often a food was eaten). Do not simply repeat the list entries back.",
+  "- If the evidence is still thin, say so in `notes` rather than leaving it blank (e.g. 'Only one meal logged so far, so this is an early signal').",
   "- Base conclusions on real signal; do not invent foods or symptoms that were never mentioned.",
 ].join("\n");
 
