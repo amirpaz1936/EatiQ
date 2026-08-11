@@ -1,5 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import { fetchMealsInRange, type MealRecord } from "../api/meals";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  fetchMealImageUrl,
+  fetchMealsInRange,
+  type MealRecord,
+} from "../api/meals";
 import {
   fetchFeedbackForMeals,
   type MealFeedbackRecord,
@@ -29,18 +33,27 @@ const slotLabels: Record<Exclude<MealSlotFilter, "all">, string> = {
   snack: "Snack",
 };
 
-const dateFormatter = new Intl.DateTimeFormat([], {
+// Pinned to en-US on purpose: the UI is English-only, so day/month names must not
+// follow the browser locale.
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
   month: "short",
   day: "numeric",
 });
 
-const shortDateFormatter = new Intl.DateTimeFormat([], {
+const shortDateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
 });
 
-const timeFormatter = new Intl.DateTimeFormat([], {
+const timeFormatter = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+const feedbackStampFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
   hour: "numeric",
   minute: "2-digit",
 });
@@ -533,7 +546,9 @@ function DayGroup({
 
   return (
     <article>
-      <header className="sticky top-0 z-10 -mx-3 flex items-baseline justify-between border-b border-slate-200 bg-white/95 px-3 py-1.5 backdrop-blur sm:-mx-4 sm:px-4">
+      {/* Opaque on purpose — a translucent sticky header lets the meal row underneath
+          bleed through and read as a rendering glitch. */}
+      <header className="sticky top-0 z-10 -mx-3 flex items-baseline justify-between border-b border-slate-200 bg-white px-3 py-1.5 sm:-mx-4 sm:px-4">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
           {dateFormatter.format(dayDate)}
         </h2>
@@ -569,8 +584,17 @@ function MealRow({
 }) {
   const eatenAt = new Date(meal.eatenAt);
   const slot = mealSlotFromDate(eatenAt);
+  const rowRef = useRef<HTMLLIElement | null>(null);
+
+  // Expanding a row near the top of the viewport would leave its title tucked under
+  // the sticky day header; scroll-mt keeps it clear.
+  useEffect(() => {
+    if (!expanded) return;
+    rowRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [expanded]);
+
   return (
-    <li>
+    <li ref={rowRef} className="scroll-mt-10">
       <button
         type="button"
         onClick={onToggle}
@@ -600,6 +624,7 @@ function MealRow({
       </button>
       {expanded && (
         <div className="mt-2 space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+          <MealPhoto mealId={meal._id} hasPhoto={Boolean(meal.imageObjectKey)} />
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Macro label="Protein" value={meal.totals.proteinGrams} unit="g" />
             <Macro label="Carbs" value={meal.totals.carbsGrams} unit="g" />
@@ -640,6 +665,47 @@ function MealRow({
   );
 }
 
+/**
+ * The scanned photo, fetched lazily when a row is opened. The URL is presigned and
+ * short-lived, so it's requested per expansion rather than carried on the meal record.
+ */
+function MealPhoto({ mealId, hasPhoto }: { mealId: string; hasPhoto: boolean }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (!hasPhoto) return;
+    let cancelled = false;
+    setFailed(false);
+    fetchMealImageUrl(mealId).then((next) => {
+      if (cancelled) return;
+      if (next) setUrl(next);
+      else setFailed(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [mealId, hasPhoto]);
+
+  if (!hasPhoto || failed) return null;
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      {url ? (
+        <img
+          src={url}
+          alt="Scanned meal"
+          loading="lazy"
+          onError={() => setFailed(true)}
+          className="h-36 w-full object-cover sm:h-44"
+        />
+      ) : (
+        <div className="h-36 w-full animate-pulse bg-slate-100 sm:h-44" />
+      )}
+    </div>
+  );
+}
+
 function FeedbackPanel({ feedback }: { feedback: MealFeedbackRecord }) {
   const tints: Record<Sentiment | "none", string> = {
     good: "border-emerald-200 bg-emerald-50",
@@ -658,12 +724,7 @@ function FeedbackPanel({ feedback }: { feedback: MealFeedbackRecord }) {
           <span>How you felt</span>
         </p>
         <p className="text-[10px] text-slate-500">
-          {new Date(feedback.createdAt).toLocaleString([], {
-            month: "short",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-          })}
+          {feedbackStampFormatter.format(new Date(feedback.createdAt))}
         </p>
       </div>
       {feedback.feeling && (

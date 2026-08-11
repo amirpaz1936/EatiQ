@@ -9,6 +9,7 @@ import {
   UserMealSchema,
 } from "@eatiq/db";
 import { FeedbackInsightsService } from "./feedback-insights.service";
+import { SuggestionsCacheModule } from "../suggestions/suggestions-cache.module";
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { FeedbackInsightsService } from "./feedback-insights.service";
       { name: UserMeal.name, schema: UserMealSchema },
       { name: MealFeedback.name, schema: MealFeedbackSchema },
     ]),
+    SuggestionsCacheModule,
   ],
   providers: [FeedbackInsightsService],
   exports: [FeedbackInsightsService],

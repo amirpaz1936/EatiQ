@@ -36,6 +36,9 @@ export type FeedbackInsights = {
   feedbackCount: number;
 };
 
+export const INSIGHT_LISTS = ["avoid", "reduce", "enjoyed"] as const;
+export type InsightList = (typeof INSIGHT_LISTS)[number];
+
 export const defaultProfile: UserProfile = {
   goal: "muscle_gain",
   heightCm: 160,

@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Headers,
+  Param,
   Post,
   Query,
   UnauthorizedException,
@@ -31,5 +32,19 @@ export class MealsController {
   ) {
     if (!userId) throw new UnauthorizedException();
     return this.mealsService.findInRange(userId, query.from, query.to);
+  }
+
+  /**
+   * Returns a freshly signed URL rather than redirecting to it: auth here is an
+   * `Authorization: Bearer` header, which an `<img src>` cannot send. The client
+   * fetches the URL first, then points the tag at the (already authorized) S3 link.
+   */
+  @Get(":id/image")
+  async image(
+    @Headers("x-user-id") userId: string | undefined,
+    @Param("id") id: string,
+  ) {
+    if (!userId) throw new UnauthorizedException();
+    return { url: await this.mealsService.presignImage(userId, id) };
   }
 }

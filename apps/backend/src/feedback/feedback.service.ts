@@ -1,7 +1,9 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
+  OnModuleInit,
 } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import {
@@ -15,7 +17,9 @@ import type { CreateFeedbackDto } from "./dto/create-feedback.dto";
 import { FeedbackInsightsService } from "../feedback-insights/feedback-insights.service";
 
 @Injectable()
-export class FeedbackService {
+export class FeedbackService implements OnModuleInit {
+  private readonly logger = new Logger(FeedbackService.name);
+
   constructor(
     @InjectModel(MealFeedback.name)
     private readonly feedbackModel: Model<MealFeedbackDocument>,
@@ -24,7 +28,16 @@ export class FeedbackService {
     private readonly insights: FeedbackInsightsService,
   ) {}
 
-  async create(
+  async onModuleInit(): Promise<void> {
+    await this.collapseDuplicateFeedback();
+  }
+
+  /**
+   * Saves the user's feedback for a meal, replacing any previous feedback for that
+   * same meal. Editing must overwrite: keeping both the original and the correction
+   * is what let stale opinions leak into the insights summary.
+   */
+  async save(
     userId: string,
     dto: CreateFeedbackDto,
   ): Promise<MealFeedbackDocument> {
@@ -36,13 +49,19 @@ export class FeedbackService {
       throw new ForbiddenException("Meal does not belong to this user");
     }
 
-    const feedback = await this.feedbackModel.create({
-      userId: new Types.ObjectId(userId),
-      mealId: meal._id,
-      feeling: dto.feeling?.trim() ?? "",
-      sentiment: dto.sentiment ?? null,
-      symptoms: dto.symptoms?.trim() ?? "",
-    });
+    const feedback = await this.feedbackModel
+      .findOneAndUpdate(
+        { userId: new Types.ObjectId(userId), mealId: meal._id },
+        {
+          $set: {
+            feeling: dto.feeling?.trim() ?? "",
+            sentiment: dto.sentiment ?? null,
+            symptoms: dto.symptoms?.trim() ?? "",
+          },
+        },
+        { new: true, upsert: true, setDefaultsOnInsert: true },
+      )
+      .exec();
 
     // Fold this feedback into the user's rolling insights summary in the
     // background — never block or fail the write on the summarizer LLM.
@@ -66,5 +85,44 @@ export class FeedbackService {
       })
       .sort({ createdAt: -1 })
       .exec();
+  }
+
+  /**
+   * Collapses pre-existing duplicate feedback (keeping the newest per meal) so the
+   * unique (userId, mealId) index can build on databases written before feedback
+   * became an upsert. No-op once the data is clean.
+   */
+  private async collapseDuplicateFeedback(): Promise<void> {
+    try {
+      const duplicates = await this.feedbackModel
+        .aggregate<{ _id: { userId: Types.ObjectId; mealId: Types.ObjectId }; stale: Types.ObjectId[] }>([
+          { $sort: { createdAt: -1 } },
+          {
+            $group: {
+              _id: { userId: "$userId", mealId: "$mealId" },
+              ids: { $push: "$_id" },
+            },
+          },
+          { $match: { "ids.1": { $exists: true } } },
+          { $project: { stale: { $slice: ["$ids", 1, { $size: "$ids" }] } } },
+        ])
+        .exec();
+
+      const staleIds = duplicates.flatMap((d) => d.stale);
+      if (staleIds.length > 0) {
+        await this.feedbackModel.deleteMany({ _id: { $in: staleIds } }).exec();
+        this.logger.log(
+          `collapsed ${staleIds.length} superseded feedback row(s) across ${duplicates.length} meal(s)`,
+        );
+      }
+
+      // The automatic build races this cleanup on a dirty database and may have
+      // already failed; re-sync now that duplicates are gone.
+      await this.feedbackModel.syncIndexes();
+    } catch (err) {
+      this.logger.warn(
+        `feedback duplicate cleanup failed: ${(err as Error).message}`,
+      );
+    }
   }
 }

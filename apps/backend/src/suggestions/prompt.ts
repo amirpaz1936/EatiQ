@@ -5,7 +5,10 @@ export const SYSTEM_PROMPT = [
   "Given the user's profile, dietary constraints, and what they've already eaten today,",
   "suggest exactly THREE distinct, realistic meal options for the requested meal slot.",
   "Rules:",
-  "- Respect the diet type and the avoid-list strictly. Never include avoided ingredients.",
+  "- The avoid-list is an absolute constraint, not a preference. A suggestion must not contain an avoided ingredient in any form — not as a main component, a garnish, a substitute, or a mention in the name, description, or reason.",
+  "- This includes obvious variants of an avoided term: avoiding 'turkey' also rules out turkey breast, ground turkey, smoked turkey and turkey bacon.",
+  "- If avoiding an ingredient makes an otherwise good dish impossible, pick a different dish. Never suggest one and note that the ingredient can be swapped out.",
+  "- Respect the diet type strictly as well.",
   "- Treat ingredients flagged to avoid from past feedback as equally off-limits, and favor ingredients the user has enjoyed.",
   "- Tailor portion sizes and macros toward the user's goal and remaining daily calorie budget.",
   "- Keep meals practical and commonly available; vary them (don't suggest three near-identical dishes).",
@@ -34,6 +37,11 @@ export interface SuggestionUserContext {
   };
   consumedCaloriesToday: number;
   feedbackInsights: FeedbackInsightsContext;
+  /**
+   * Set only on a retry, describing how the previous attempt broke the avoid-list.
+   * Naming the specific failure works far better than repeating the rule.
+   */
+  retryViolations?: string[];
 }
 
 export function buildUserText(ctx: SuggestionUserContext): string {
@@ -69,6 +77,15 @@ export function buildUserText(ctx: SuggestionUserContext): string {
   }
   if (fi.notes.trim()) {
     lines.push(`Feedback notes: ${fi.notes.trim()}`);
+  }
+
+  if (ctx.retryViolations?.length) {
+    lines.push(
+      "",
+      "IMPORTANT — your previous attempt broke the avoid-list:",
+      ...ctx.retryViolations.map((v) => `- ${v}`),
+      "Produce three completely different meals that contain none of the avoided ingredients.",
+    );
   }
 
   lines.push(`Suggest 3 ${ctx.mealSlot} options now.`);

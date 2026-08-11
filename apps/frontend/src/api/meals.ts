@@ -6,6 +6,7 @@ export type MealRecord = {
   userId: string;
   name: string;
   imageUrl: string | null;
+  imageObjectKey: string | null;
   eatenAt: string;
   totals: NutritionTotals;
   items: AnalysisItem[];
@@ -19,9 +20,26 @@ export type CreateMealInput = {
   name: string;
   totals: NutritionTotals;
   items: AnalysisItem[];
+  imageObjectKey?: string | null;
   language?: string | null;
   notes?: string;
 };
+
+/**
+ * Presigned photo URLs are short-lived, so they're minted per view rather than
+ * stored. Resolves to null when the meal has no photo (logged from a suggestion,
+ * or saved before photos were persisted).
+ */
+export async function fetchMealImageUrl(mealId: string): Promise<string | null> {
+  try {
+    const { url } = await apiRequest<{ url: string }>(
+      `/api/meals/${mealId}/image`,
+    );
+    return url;
+  } catch {
+    return null;
+  }
+}
 
 export function saveMeal(input: CreateMealInput): Promise<MealRecord> {
   return apiRequest<MealRecord>("/api/meals", {

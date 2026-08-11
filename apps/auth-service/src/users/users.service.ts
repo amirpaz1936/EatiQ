@@ -1,10 +1,16 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { Profile, ProfileDocument, User, UserDocument } from "@eatiq/db";
+import {
+  GOOGLE_ID_INDEX_NAME,
+  Profile,
+  ProfileDocument,
+  User,
+  UserDocument,
+} from "@eatiq/db";
 import { Model, Types } from "mongoose";
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
   private readonly logger = new Logger(UsersService.name);
 
   constructor(
@@ -12,6 +18,10 @@ export class UsersService {
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.replaceLegacyGoogleIdIndex();
+  }
 
   findByEmail(email: string): Promise<UserDocument | null> {
     return this.userModel.findOne({ email: email.toLowerCase() }).exec();
@@ -63,6 +73,37 @@ export class UsersService {
       if (this.isDuplicateKeyError(err)) return;
       this.logger.error(`Failed to create profile for user ${userId}`, err);
       throw err;
+    }
+  }
+
+  /**
+   * Replaces the old sparse unique `googleId` index with the partial one.
+   *
+   * Mongoose never rebuilds an index that already exists under the same name, even
+   * when its options changed — so the broken sparse version would survive the schema
+   * fix forever and keep rejecting the second email/password signup. Drop it once,
+   * then let the corrected definition build.
+   */
+  private async replaceLegacyGoogleIdIndex(): Promise<void> {
+    try {
+      const indexes = await this.userModel.collection.indexes();
+      const existing = indexes.find((i) => i.name === GOOGLE_ID_INDEX_NAME);
+
+      if (existing && !existing.partialFilterExpression) {
+        await this.userModel.collection.dropIndex(GOOGLE_ID_INDEX_NAME);
+        this.logger.log(
+          `dropped legacy sparse ${GOOGLE_ID_INDEX_NAME} index (it collided on googleId: null)`,
+        );
+      }
+
+      // Safe to call unconditionally: creating an index that already matches is a
+      // no-op, and the partial filter excludes nulls so the build can't fail on
+      // existing password users.
+      await this.userModel.createIndexes();
+    } catch (err) {
+      this.logger.error(
+        `googleId index migration failed: ${(err as Error).message}`,
+      );
     }
   }
 

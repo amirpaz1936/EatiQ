@@ -63,6 +63,12 @@ export class UserMeal {
   @Prop({ type: String, default: null })
   imageUrl!: string | null;
 
+  // S3/MinIO key of the scanned photo. We store the key rather than a URL because
+  // every URL we can hand out is a short-lived presigned one — it must be re-signed
+  // on read, not persisted.
+  @Prop({ type: String, default: null })
+  imageObjectKey!: string | null;
+
   @Prop({ type: Date, required: true, index: true })
   eatenAt!: Date;
 

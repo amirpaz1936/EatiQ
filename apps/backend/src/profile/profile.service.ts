@@ -3,12 +3,14 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Profile, ProfileDocument } from "@eatiq/db";
 import { Model, Types } from "mongoose";
 import type { UpdateProfileDto } from "./dto/update-profile.dto";
+import { SuggestionsCacheService } from "../suggestions/suggestions-cache.service";
 
 @Injectable()
 export class ProfileService {
   constructor(
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
+    private readonly suggestionsCache: SuggestionsCacheService,
   ) {}
 
   async get(userId: string): Promise<ProfileDocument> {
@@ -27,12 +29,19 @@ export class ProfileService {
     dto: UpdateProfileDto,
   ): Promise<ProfileDocument> {
     const id = new Types.ObjectId(userId);
-    return this.profileModel
+    const updated = await this.profileModel
       .findOneAndUpdate(
         { userId: id },
         { $set: dto, $setOnInsert: { userId: id } },
         { new: true, upsert: true },
       )
       .exec();
+
+    // Cached suggestions were generated against the *old* profile. Without this, a
+    // newly added avoid-item keeps showing up in recommendations until the 2h TTL
+    // lapses, which reads as the app ignoring the setting.
+    await this.suggestionsCache.invalidateForUser(userId);
+
+    return updated;
   }
 }
