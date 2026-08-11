@@ -690,17 +690,17 @@ function MealPhoto({ mealId, hasPhoto }: { mealId: string; hasPhoto: boolean }) 
   if (!hasPhoto || failed) return null;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+    <div className="flex justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
       {url ? (
         <img
           src={url}
           alt="Scanned meal"
           loading="lazy"
           onError={() => setFailed(true)}
-          className="h-36 w-full object-cover sm:h-44"
+          className="max-h-[300px] max-w-full"
         />
       ) : (
-        <div className="h-36 w-full animate-pulse bg-slate-100 sm:h-44" />
+        <div className="h-48 w-full animate-pulse bg-slate-100" />
       )}
     </div>
   );
