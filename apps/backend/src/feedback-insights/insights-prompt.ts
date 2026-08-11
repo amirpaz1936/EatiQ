@@ -8,6 +8,8 @@ export const SYSTEM_PROMPT = [
   "- Generalize across ingredients: if several disliked or symptom-causing meals share an ingredient, capture the shared ingredient (e.g. 'dairy', 'fried food', 'shellfish') rather than each dish.",
   "- An ingredient tied to bad sentiment or symptoms goes in `avoid`. Mild/occasional discomfort goes in `reduce`. Ingredients in good-sentiment meals go in `enjoyed`.",
   "- Carry forward still-relevant entries from the current summary; drop ones the recent feedback contradicts (e.g. a previously-avoided food now repeatedly enjoyed without symptoms).",
+  "- RECENT FEEDBACK is authoritative: it lists each meal's latest feedback, already replacing any earlier feedback the user edited or corrected. Where it disagrees with the current summary, the recent feedback wins.",
+  "- If an entry in the current summary rests only on a meal that now appears in RECENT FEEDBACK without that problem, remove the entry. Corrections must be able to shrink the lists, not only grow them.",
   "- If an ingredient appears in both good and bad meals, prefer caution: keep it out of `enjoyed` and consider `reduce`.",
   "- Keep each list deduplicated, lowercase, and concise (at most 20 entries). Use `notes` only for patterns that aren't about a specific ingredient.",
   "- Base conclusions on real signal; do not invent foods or symptoms that were never mentioned.",

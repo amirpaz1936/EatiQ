@@ -1,14 +1,26 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { UserMeal, UserMealDocument } from "@eatiq/db";
 import { Model, Types } from "mongoose";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { CreateMealDto } from "./dto/create-meal.dto";
+import { S3ClientProvider } from "../image-recognition/s3.client";
+
+// Long enough to render a history page, short enough that a leaked URL goes stale.
+const IMAGE_PRESIGN_EXPIRES_SECONDS = 15 * 60;
 
 @Injectable()
 export class MealsService {
   constructor(
     @InjectModel(UserMeal.name)
     private readonly userMealModel: Model<UserMealDocument>,
+    private readonly s3: S3ClientProvider,
   ) {}
 
   async create(userId: string, dto: CreateMealDto): Promise<UserMealDocument> {
@@ -16,6 +28,7 @@ export class MealsService {
       userId: new Types.ObjectId(userId),
       name: dto.name,
       imageUrl: dto.imageUrl ?? null,
+      imageObjectKey: this.ownedKeyOrNull(userId, dto.imageObjectKey),
       eatenAt: new Date(),
       totals: dto.totals,
       items: dto.items,
@@ -42,5 +55,49 @@ export class MealsService {
       })
       .sort({ eatenAt: -1 })
       .exec();
+  }
+
+  /**
+   * Fresh presigned GET for a meal's photo. Signed with the *public* client so the
+   * browser can follow it — the internal endpoint is only reachable inside the
+   * docker network.
+   */
+  async presignImage(userId: string, mealId: string): Promise<string> {
+    if (!Types.ObjectId.isValid(mealId)) {
+      throw new NotFoundException("Meal not found");
+    }
+
+    const meal = await this.userMealModel
+      .findById(mealId, { userId: 1, imageObjectKey: 1 })
+      .lean()
+      .exec();
+
+    if (!meal) throw new NotFoundException("Meal not found");
+    if (String(meal.userId) !== userId) {
+      throw new ForbiddenException("Meal does not belong to this user");
+    }
+    if (!meal.imageObjectKey) {
+      throw new NotFoundException("Meal has no photo");
+    }
+
+    const command = new GetObjectCommand({
+      Bucket: this.s3.bucket,
+      Key: meal.imageObjectKey,
+    });
+    return getSignedUrl(this.s3.publicClient, command, {
+      expiresIn: IMAGE_PRESIGN_EXPIRES_SECONDS,
+    });
+  }
+
+  /**
+   * Clients hand us the key they uploaded to. Re-check the ownership prefix here so a
+   * caller can't attach someone else's object to their own meal.
+   */
+  private ownedKeyOrNull(
+    userId: string,
+    objectKey: string | null | undefined,
+  ): string | null {
+    if (!objectKey) return null;
+    return objectKey.startsWith(`users/${userId}/`) ? objectKey : null;
   }
 }

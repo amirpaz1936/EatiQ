@@ -2,20 +2,25 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchProfile } from "../api/profile";
 import { fetchTodaysMeals, type MealRecord } from "../api/meals";
 import { AddFeedbackModal } from "../components/feedback/AddFeedbackModal";
-import { CameraIcon, FlameIcon, SparklesIcon, UtensilsIcon } from "../components/icons";
+import { CameraIcon, FlameIcon, UtensilsIcon } from "../components/icons";
 import { ScanMealModal } from "../components/scan/ScanMealModal";
 import { ScanResultsCard } from "../components/scan/ScanResultsCard";
 import { MealSuggestionsCard } from "../components/dashboard/MealSuggestionsCard";
 import { StatCard } from "../components/dashboard/StatCard";
 import { defaultProfile } from "../types/profile";
-import type { AnalysisResult } from "../api/scan";
+import type { ScannedMeal } from "../api/scan";
+import type { NavItemId } from "../components/dashboard/DashboardNav";
 
-const timeFormatter = new Intl.DateTimeFormat([], {
+const timeFormatter = new Intl.DateTimeFormat("en-US", {
   hour: "numeric",
   minute: "2-digit",
 });
 
-export function DashboardPage() {
+type DashboardPageProps = {
+  onNavigate: (id: NavItemId) => void;
+};
+
+export function DashboardPage({ onNavigate }: DashboardPageProps) {
   const [meals, setMeals] = useState<MealRecord[]>([]);
   const [dailyTarget, setDailyTarget] = useState<number>(
     defaultProfile.targetCaloriesDaily,
@@ -54,9 +59,16 @@ export function DashboardPage() {
   const overBudget = calories > dailyTarget;
 
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackMealId, setFeedbackMealId] = useState<string | undefined>();
   const [feedbackSaved, setFeedbackSaved] = useState(false);
+
+  const openFeedbackFor = useCallback((mealId?: string) => {
+    setFeedbackMealId(mealId);
+    setFeedbackSaved(false);
+    setFeedbackOpen(true);
+  }, []);
   const [scanOpen, setScanOpen] = useState(false);
-  const [scanResult, setScanResult] = useState<AnalysisResult | null>(null);
+  const [scanResult, setScanResult] = useState<ScannedMeal | null>(null);
   const [scanCompleteMessage, setScanCompleteMessage] = useState(false);
   const scanResultRef = useRef<HTMLDivElement | null>(null);
 
@@ -104,7 +116,7 @@ export function DashboardPage() {
           </button>
         </div>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
           <StatCard
             label="Calories"
             value={calories}
@@ -123,13 +135,6 @@ export function DashboardPage() {
             hint="today"
             icon={<UtensilsIcon />}
             accent="slate"
-          />
-          <StatCard
-            label="Recommendation"
-            value="—"
-            hint="Based on profile & history"
-            icon={<SparklesIcon />}
-            accent="violet"
           />
         </div>
 
@@ -154,10 +159,7 @@ export function DashboardPage() {
             <div className="flex items-center gap-4 text-sm">
               <button
                 type="button"
-                onClick={() => {
-                  setFeedbackSaved(false);
-                  setFeedbackOpen(true);
-                }}
+                onClick={() => openFeedbackFor(meals[0]?._id)}
                 disabled={meals.length === 0}
                 className="font-medium text-blue-600 transition hover:text-blue-700 disabled:cursor-not-allowed disabled:text-slate-400"
               >
@@ -165,6 +167,7 @@ export function DashboardPage() {
               </button>
               <button
                 type="button"
+                onClick={() => onNavigate("history")}
                 className="font-medium text-slate-500 transition hover:text-slate-700"
               >
                 View all
@@ -217,6 +220,15 @@ export function DashboardPage() {
                     </p>
                     <p className="text-xs text-slate-500">cal</p>
                   </div>
+                  {/* Per-row entry point so it's unambiguous which meal the
+                      feedback attaches to. */}
+                  <button
+                    type="button"
+                    onClick={() => openFeedbackFor(meal._id)}
+                    className="shrink-0 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                  >
+                    Feedback
+                  </button>
                 </div>
               ))}
             </div>
@@ -228,7 +240,7 @@ export function DashboardPage() {
         open={feedbackOpen}
         onClose={() => setFeedbackOpen(false)}
         meals={meals}
-        defaultMealId={meals[0]?._id}
+        defaultMealId={feedbackMealId ?? meals[0]?._id}
         onSaved={() => setFeedbackSaved(true)}
       />
       <ScanMealModal

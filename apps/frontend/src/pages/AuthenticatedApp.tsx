@@ -22,7 +22,7 @@ export function AuthenticatedApp({ user, onLogout }: AuthenticatedAppProps) {
       activeId={route}
       onNavigate={setRoute}
     >
-      {route === "dashboard" && <DashboardPage />}
+      {route === "dashboard" && <DashboardPage onNavigate={setRoute} />}
       {route === "profile" && <ProfilePage />}
       {route === "scan" && <ScanMealPage />}
       {route === "history" && <HistoryPage />}

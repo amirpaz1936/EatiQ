@@ -5,14 +5,14 @@ import {
   analyzeUploadedImage,
   requestUploadPresign,
   uploadBlobToPresignedUrl,
-  type AnalysisResult,
+  type ScannedMeal,
   type UploadContentType,
 } from "../../api/scan";
 
 type ScanMealModalProps = {
   open: boolean;
   onClose: () => void;
-  onResult: (result: AnalysisResult) => void;
+  onResult: (result: ScannedMeal) => void;
 };
 
 const ALLOWED_CONTENT_TYPES: readonly UploadContentType[] = [
@@ -126,7 +126,7 @@ export function ScanMealModal({ open, onClose, onResult }: ScanMealModalProps) {
       const { uploadUrl, objectKey } = await requestUploadPresign(contentType);
       await uploadBlobToPresignedUrl(uploadUrl, selectedBlob, contentType);
       const result = await analyzeUploadedImage(objectKey, "en");
-      onResult(result);
+      onResult({ ...result, objectKey });
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";

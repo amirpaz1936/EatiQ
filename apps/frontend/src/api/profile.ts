@@ -38,3 +38,23 @@ export function updateProfile(patch: ProfilePatch): Promise<ProfileResponse> {
     body: patch,
   });
 }
+
+export type InsightsPatch = {
+  avoid: string[];
+  reduce: string[];
+  enjoyed: string[];
+  notes: string;
+};
+
+/**
+ * Overwrites the AI-generated insight lists with the user's corrections. The server
+ * records the difference so a later regeneration re-applies the edit.
+ */
+export function updateFeedbackInsights(
+  patch: InsightsPatch,
+): Promise<FeedbackInsights> {
+  return apiRequest<FeedbackInsights>("/api/profile/insights", {
+    method: "PATCH",
+    body: patch,
+  });
+}
