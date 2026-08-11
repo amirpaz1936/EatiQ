@@ -41,12 +41,6 @@ export class MealReviewService implements OnModuleInit {
     this.client = new OpenAIReviewClient(apiKey, model);
   }
 
-  /**
-   * Judges a scanned-but-unsaved meal against the user's profile and history.
-   *
-   * Deliberately stateless — this runs before the meal is logged, so there is
-   * nothing to persist and nothing to clean up if the user decides not to eat it.
-   */
   async review(userId: string, dto: ReviewMealDto): Promise<MealReview> {
     const objectId = new Types.ObjectId(userId);
     const [profile, consumedCaloriesToday] = await Promise.all([
@@ -99,15 +93,6 @@ export class MealReviewService implements OnModuleInit {
     return guarded;
   }
 
-  /**
-   * Guarantees that an explicitly avoided ingredient present in the meal is always
-   * reported, whatever the model returned.
-   *
-   * The avoid-list is a setting the user typed in, so "the model overlooked it" is
-   * not an acceptable outcome for a health warning. Diet-type conflicts still rely
-   * on the model, since deciding whether a given food breaks a diet needs judgement
-   * that a term match can't supply.
-   */
   private enforceAvoidList(
     review: MealReview,
     dto: ReviewMealDto,
@@ -132,7 +117,6 @@ export class MealReviewService implements OnModuleInit {
     });
 
     if (missed.length === 0) {
-      // The model may still have under-rated a violation it did spot.
       return review.warnings.some((w) => w.severity === "blocking")
         ? { ...review, verdict: "avoid" }
         : review;

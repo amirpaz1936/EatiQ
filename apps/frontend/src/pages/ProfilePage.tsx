@@ -202,8 +202,6 @@ export function ProfilePage() {
         </div>
       </form>
 
-      {/* Outside the profile form: insights save through their own endpoint, so
-          nesting them would make one "Save" button look like it covers both. */}
       <div className="mt-6">
         <FeedbackInsightsSection insights={insights} onSaved={setInsights} />
       </div>
@@ -307,8 +305,6 @@ function FeedbackInsightsSection({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  // Re-seed whenever the server sends a newer summary (initial load, or a refresh
-  // triggered by new feedback) — but never mid-edit.
   const serverDraft = toDraft(insights);
   const [baseline, setBaseline] = useState<InsightsDraft>(serverDraft);
   if (!sameDraft(serverDraft, baseline) && sameDraft(draft, baseline)) {
@@ -509,7 +505,6 @@ function EditableChips({
         onChange={(e) => setEntry(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {
-          // Enter would submit the surrounding profile form.
           if (e.key === "Enter" || e.key === ",") {
             e.preventDefault();
             commit();

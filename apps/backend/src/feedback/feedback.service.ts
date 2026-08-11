@@ -32,11 +32,6 @@ export class FeedbackService implements OnModuleInit {
     await this.collapseDuplicateFeedback();
   }
 
-  /**
-   * Saves the user's feedback for a meal, replacing any previous feedback for that
-   * same meal. Editing must overwrite: keeping both the original and the correction
-   * is what let stale opinions leak into the insights summary.
-   */
   async save(
     userId: string,
     dto: CreateFeedbackDto,
@@ -87,11 +82,6 @@ export class FeedbackService implements OnModuleInit {
       .exec();
   }
 
-  /**
-   * Collapses pre-existing duplicate feedback (keeping the newest per meal) so the
-   * unique (userId, mealId) index can build on databases written before feedback
-   * became an upsert. No-op once the data is clean.
-   */
   private async collapseDuplicateFeedback(): Promise<void> {
     try {
       const duplicates = await this.feedbackModel
@@ -116,8 +106,6 @@ export class FeedbackService implements OnModuleInit {
         );
       }
 
-      // The automatic build races this cleanup on a dirty database and may have
-      // already failed; re-sync now that duplicates are gone.
       await this.feedbackModel.syncIndexes();
     } catch (err) {
       this.logger.warn(

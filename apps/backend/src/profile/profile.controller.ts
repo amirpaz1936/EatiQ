@@ -33,8 +33,6 @@ export class ProfileController {
     return this.profileService.update(userId, dto);
   }
 
-  // Separate from PATCH /profile: these lists are AI-maintained, and a hand-edit has
-  // to be recorded as an override so the next regeneration doesn't undo it.
   @Patch("insights")
   async updateInsights(
     @Headers("x-user-id") userId: string | undefined,

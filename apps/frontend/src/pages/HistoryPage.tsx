@@ -33,8 +33,6 @@ const slotLabels: Record<Exclude<MealSlotFilter, "all">, string> = {
   snack: "Snack",
 };
 
-// Pinned to en-US on purpose: the UI is English-only, so day/month names must not
-// follow the browser locale.
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
   month: "short",
@@ -546,8 +544,6 @@ function DayGroup({
 
   return (
     <article>
-      {/* Opaque on purpose — a translucent sticky header lets the meal row underneath
-          bleed through and read as a rendering glitch. */}
       <header className="sticky top-0 z-10 -mx-3 flex items-baseline justify-between border-b border-slate-200 bg-white px-3 py-1.5 sm:-mx-4 sm:px-4">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
           {dateFormatter.format(dayDate)}
@@ -586,8 +582,6 @@ function MealRow({
   const slot = mealSlotFromDate(eatenAt);
   const rowRef = useRef<HTMLLIElement | null>(null);
 
-  // Expanding a row near the top of the viewport would leave its title tucked under
-  // the sticky day header; scroll-mt keeps it clear.
   useEffect(() => {
     if (!expanded) return;
     rowRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -665,10 +659,6 @@ function MealRow({
   );
 }
 
-/**
- * The scanned photo, fetched lazily when a row is opened. The URL is presigned and
- * short-lived, so it's requested per expansion rather than carried on the meal record.
- */
 function MealPhoto({ mealId, hasPhoto }: { mealId: string; hasPhoto: boolean }) {
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);

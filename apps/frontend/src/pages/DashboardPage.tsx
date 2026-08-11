@@ -220,8 +220,6 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
                     </p>
                     <p className="text-xs text-slate-500">cal</p>
                   </div>
-                  {/* Per-row entry point so it's unambiguous which meal the
-                      feedback attaches to. */}
                   <button
                     type="button"
                     onClick={() => openFeedbackFor(meal._id)}

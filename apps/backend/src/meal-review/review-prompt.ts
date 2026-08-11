@@ -12,13 +12,6 @@ export const SYSTEM_PROMPT = [
   "- Be direct and specific. The user is deciding right now whether to eat this.",
 ].join("\n");
 
-/**
- * What each diet type forbids, spelled out for the prompt.
- *
- * Naming the foods beats naming the diet: models reliably miss that "gluten-free"
- * excludes the white bread sitting in the item list, but not when the exclusion is
- * stated as an explicit list next to the meal.
- */
 const DIET_TYPE_EXCLUSIONS: Record<string, string> = {
   gluten_free:
     "wheat bread, pasta, couscous, barley, rye, breadcrumbs, regular flour, beer, most soy sauce",

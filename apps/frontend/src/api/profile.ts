@@ -46,10 +46,6 @@ export type InsightsPatch = {
   notes: string;
 };
 
-/**
- * Overwrites the AI-generated insight lists with the user's corrections. The server
- * records the difference so a later regeneration re-applies the edit.
- */
 export function updateFeedbackInsights(
   patch: InsightsPatch,
 ): Promise<FeedbackInsights> {

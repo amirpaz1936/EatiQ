@@ -5,14 +5,6 @@ import type { SuggestionsResult } from "./schema";
 
 export const SUGGESTIONS_CACHE_TTL_SECONDS = 2 * 60 * 60; // 2 hours
 
-/**
- * Read/write/invalidate for cached meal suggestions.
- *
- * Invalidation lives here rather than inside SuggestionsService because the inputs
- * that make a cached suggestion wrong are owned by *other* modules: editing the
- * profile's avoid-list or refreshing feedback insights both have to drop the cache,
- * otherwise a newly-avoided ingredient keeps being suggested until the TTL expires.
- */
 @Injectable()
 export class SuggestionsCacheService {
   private readonly logger = new Logger(SuggestionsCacheService.name);
@@ -50,7 +42,6 @@ export class SuggestionsCacheService {
     }
   }
 
-  /** Drops every cached slot/language combination for one user. */
   async invalidateForUser(userId: string): Promise<void> {
     const pattern = `suggestions:${userId}:*`;
     try {

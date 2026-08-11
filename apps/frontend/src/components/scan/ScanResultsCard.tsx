@@ -45,8 +45,6 @@ export function ScanResultsCard({ result, onClear, onSaved }: ScanResultsCardPro
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [reviewRequested, setReviewRequested] = useState(false);
 
-  // Kicked off as soon as the analysis lands so the verdict is already waiting by
-  // the time the user asks for it — the button reveals it rather than starting it.
   useEffect(() => {
     if (!hasItems) return;
 
@@ -228,10 +226,6 @@ const VERDICT_STYLES = {
   },
 } as const;
 
-/**
- * Advisory only — a warning never blocks saving. The log records what the user
- * actually ate, and that has to stay true even when the answer was "don't".
- */
 function ReviewPanel({
   review,
   error,

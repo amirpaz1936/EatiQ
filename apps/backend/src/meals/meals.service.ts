@@ -12,7 +12,6 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { CreateMealDto } from "./dto/create-meal.dto";
 import { S3ClientProvider } from "../image-recognition/s3.client";
 
-// Long enough to render a history page, short enough that a leaked URL goes stale.
 const IMAGE_PRESIGN_EXPIRES_SECONDS = 15 * 60;
 
 @Injectable()
@@ -57,11 +56,6 @@ export class MealsService {
       .exec();
   }
 
-  /**
-   * Fresh presigned GET for a meal's photo. Signed with the *public* client so the
-   * browser can follow it — the internal endpoint is only reachable inside the
-   * docker network.
-   */
   async presignImage(userId: string, mealId: string): Promise<string> {
     if (!Types.ObjectId.isValid(mealId)) {
       throw new NotFoundException("Meal not found");
@@ -89,10 +83,6 @@ export class MealsService {
     });
   }
 
-  /**
-   * Clients hand us the key they uploaded to. Re-check the ownership prefix here so a
-   * caller can't attach someone else's object to their own meal.
-   */
   private ownedKeyOrNull(
     userId: string,
     objectKey: string | null | undefined,

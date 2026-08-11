@@ -23,7 +23,6 @@ export type ReviewMealInput = {
   language?: string;
 };
 
-/** Asks whether the user should eat a scanned meal. Nothing is persisted. */
 export function reviewMeal(input: ReviewMealInput): Promise<MealReview> {
   return apiRequest<MealReview>("/api/meal-review", {
     method: "POST",
