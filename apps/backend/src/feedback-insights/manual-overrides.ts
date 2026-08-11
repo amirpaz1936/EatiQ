@@ -90,12 +90,15 @@ export function deriveOverrides(
     INSIGHT_LISTS.flatMap((list) => desired[list]),
   );
 
+  const desiredNotes = desired.notes.trim();
+  const notesChanged = desiredNotes !== current.notes.trim();
+
   const next: ManualOverrides = {
     avoid: [],
     reduce: [],
     enjoyed: [],
     removed: [],
-    notes: desired.notes.trim() ? desired.notes.trim() : null,
+    notes: notesChanged ? desiredNotes || null : existing.notes,
   };
 
   const droppedTerms = new Set<string>();
