@@ -319,6 +319,7 @@ function FeedbackInsightsSection({
   }, [saved]);
 
   const dirty = !sameDraft(draft, baseline);
+  const notesPinned = insights?.manual?.notes != null;
 
   const isEmpty =
     draft.avoid.length === 0 &&
@@ -408,6 +409,19 @@ function FeedbackInsightsSection({
             placeholder="Patterns that aren't about a single ingredient — meal timing, portion size…"
             className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/25"
           />
+          {notesPinned && (
+            <p className="text-xs text-slate-500">
+              These notes are yours, so new feedback no longer rewrites them.{" "}
+              <button
+                type="button"
+                onClick={() => setDraft((prev) => ({ ...prev, notes: "" }))}
+                className="font-medium text-blue-600 underline-offset-2 transition hover:text-blue-700 hover:underline"
+              >
+                Clear them
+              </button>{" "}
+              to let the AI manage this again.
+            </p>
+          )}
         </div>
       </div>
 

@@ -28,12 +28,21 @@ export type UserProfile = {
   notes: string;
 };
 
+export type ManualInsightOverrides = {
+  avoid: string[];
+  reduce: string[];
+  enjoyed: string[];
+  removed: string[];
+  notes: string | null;
+};
+
 export type FeedbackInsights = {
   avoid: string[];
   reduce: string[];
   enjoyed: string[];
   notes: string;
   feedbackCount: number;
+  manual?: ManualInsightOverrides;
 };
 
 export const INSIGHT_LISTS = ["avoid", "reduce", "enjoyed"] as const;
