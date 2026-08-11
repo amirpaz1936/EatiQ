@@ -9,10 +9,6 @@ import {
 const MAX_ENTRIES = 20;
 const MAX_ENTRY_LENGTH = 60;
 
-/**
- * The full state the user wants the insight lists to hold. Omitted fields are left
- * untouched; an empty array explicitly clears a list.
- */
 export class UpdateInsightsDto {
   @IsOptional()
   @IsArray()

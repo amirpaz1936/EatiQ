@@ -63,9 +63,6 @@ export class FeedbackInsightsService implements OnModuleInit {
     try {
       const objectId = new Types.ObjectId(userId);
 
-      // Dedupe by meal before taking the window. A meal whose feedback was edited
-      // must contribute its *latest* opinion once — pulling raw rows would let a
-      // correction and the thing it corrected both feed the summary.
       const feedbacks = await this.feedbackModel
         .find({ userId: objectId })
         .sort({ updatedAt: -1, createdAt: -1 })
@@ -117,7 +114,6 @@ export class FeedbackInsightsService implements OnModuleInit {
         await this.client.summarize({ current, recent }),
       );
 
-      // The user's own corrections outrank anything the summarizer produced.
       const updated = applyManualOverrides(generated, manual);
 
       await this.profileModel
@@ -148,13 +144,6 @@ export class FeedbackInsightsService implements OnModuleInit {
     }
   }
 
-  /**
-   * Applies a user's hand-edit of the insights.
-   *
-   * `desired` is the full state the user wants to see. The difference against what
-   * is currently stored becomes a durable set of overrides, so the next automatic
-   * refresh re-applies the edit instead of undoing it.
-   */
   async saveManualEdit(
     userId: string,
     desired: Partial<Insights>,
@@ -176,8 +165,6 @@ export class FeedbackInsightsService implements OnModuleInit {
       normalizeOverrides(profile?.feedbackInsights?.manual),
     );
 
-    // Re-apply the derived overrides so precedence rules (avoid beats enjoyed) hold
-    // for the saved state too, not just for regenerated ones.
     const effective = applyManualOverrides(next, manual);
     const feedbackCount = profile?.feedbackInsights?.feedbackCount ?? 0;
 
@@ -198,7 +185,6 @@ export class FeedbackInsightsService implements OnModuleInit {
       `insights manually edited user=${userId} pinned=${manual.avoid.length + manual.reduce.length + manual.enjoyed.length} removed=${manual.removed.length}`,
     );
 
-    // The edit changes what may be suggested, so cached suggestions are now stale.
     await this.suggestionsCache.invalidateForUser(userId);
 
     return { ...effective, feedbackCount, manual };

@@ -10,7 +10,6 @@ import { ImageRecognitionModule } from "../image-recognition/image-recognition.m
     MongooseModule.forFeature([
       { name: UserMeal.name, schema: UserMealSchema },
     ]),
-    // For S3ClientProvider — meal photos are re-signed on read.
     ImageRecognitionModule,
   ],
   controllers: [MealsController],

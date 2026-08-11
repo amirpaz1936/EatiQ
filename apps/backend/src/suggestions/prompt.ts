@@ -37,10 +37,6 @@ export interface SuggestionUserContext {
   };
   consumedCaloriesToday: number;
   feedbackInsights: FeedbackInsightsContext;
-  /**
-   * Set only on a retry, describing how the previous attempt broke the avoid-list.
-   * Naming the specific failure works far better than repeating the rule.
-   */
   retryViolations?: string[];
 }
 

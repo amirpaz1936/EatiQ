@@ -37,9 +37,6 @@ export class ProfileService {
       )
       .exec();
 
-    // Cached suggestions were generated against the *old* profile. Without this, a
-    // newly added avoid-item keeps showing up in recommendations until the 2h TTL
-    // lapses, which reads as the app ignoring the setting.
     await this.suggestionsCache.invalidateForUser(userId);
 
     return updated;

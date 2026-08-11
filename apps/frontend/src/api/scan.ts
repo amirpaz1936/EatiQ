@@ -25,11 +25,6 @@ export type AnalysisResult = {
   notes: string;
 };
 
-/**
- * An analysis plus the storage key of the photo it came from. The key isn't part of
- * the analyze response — the caller already holds it from the presign step — but it
- * has to travel with the result so the meal can be saved with its photo attached.
- */
 export type ScannedMeal = AnalysisResult & { objectKey: string };
 
 export type PresignResponse = {

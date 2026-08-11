@@ -51,12 +51,6 @@ export function normalizeOverrides(
   };
 }
 
-/**
- * Layers the user's corrections over a freshly generated summary.
- *
- * Precedence is avoid > reduce > enjoyed: a term the user pinned as "avoid" must not
- * also appear as something to favour, whatever the model decided.
- */
 export function applyManualOverrides(
   ai: Insights,
   manual: ManualOverrides,
@@ -74,7 +68,6 @@ export function applyManualOverrides(
     merged[list] = clean([...manual[list], ...fromAi]);
   }
 
-  // Enforce precedence once every list is assembled.
   const pinnedAvoid = new Set(merged.avoid);
   merged.reduce = merged.reduce.filter((term) => !pinnedAvoid.has(term));
   const higherPriority = new Set([...merged.avoid, ...merged.reduce]);
@@ -88,14 +81,6 @@ export function applyManualOverrides(
   };
 }
 
-/**
- * Turns a user-submitted desired state into updated overrides, by diffing it against
- * what is currently shown.
- *
- * The client edits chips, not override bookkeeping — so an entry that disappeared is
- * recorded as a removal, and one that appeared is recorded as a pin. A term moved
- * between lists counts as a pin in its new list, not a removal.
- */
 export function deriveOverrides(
   current: Insights,
   desired: Insights,
@@ -127,8 +112,6 @@ export function deriveOverrides(
     }
   }
 
-  // A term only counts as removed if it's gone from every list — otherwise it just
-  // moved. Previously-removed terms stay removed unless the user re-added one.
   next.removed = clean(
     [...existing.removed, ...droppedTerms].filter(
       (term) => !desiredEverywhere.has(term),

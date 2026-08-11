@@ -41,7 +41,4 @@ export const MealFeedbackSchema = SchemaFactory.createForClass(MealFeedback);
 
 MealFeedbackSchema.index({ userId: 1, createdAt: -1 });
 
-// One feedback per meal. Re-submitting for the same meal is an edit, not a new
-// entry — without this, corrections stack and the insights summarizer keeps folding
-// in superseded opinions alongside the correction.
 MealFeedbackSchema.index({ userId: 1, mealId: 1 }, { unique: true });

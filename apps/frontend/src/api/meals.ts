@@ -25,11 +25,6 @@ export type CreateMealInput = {
   notes?: string;
 };
 
-/**
- * Presigned photo URLs are short-lived, so they're minted per view rather than
- * stored. Resolves to null when the meal has no photo (logged from a suggestion,
- * or saved before photos were persisted).
- */
 export async function fetchMealImageUrl(mealId: string): Promise<string | null> {
   try {
     const { url } = await apiRequest<{ url: string }>(

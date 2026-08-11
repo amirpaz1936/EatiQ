@@ -22,16 +22,8 @@ export const DIET_TYPES = [
 ] as const;
 export type DietType = (typeof DIET_TYPES)[number];
 
-/**
- * The user's corrections to the AI-generated insights.
- *
- * Stored separately from the effective lists so they survive regeneration: the
- * summarizer reruns on every new feedback, and without a record of what the user
- * changed by hand those edits would be silently overwritten within one meal.
- */
 @Schema({ _id: false })
 export class ManualFeedbackInsights {
-  /** Entries the user added; re-applied to the matching list after every refresh. */
   @Prop({ type: [String], default: [] })
   avoid!: string[];
 
@@ -41,11 +33,9 @@ export class ManualFeedbackInsights {
   @Prop({ type: [String], default: [] })
   enjoyed!: string[];
 
-  /** Entries the user deleted; the AI is not allowed to reintroduce them. */
   @Prop({ type: [String], default: [] })
   removed!: string[];
 
-  /** User-authored notes. Null means "no override, use the AI's notes". */
   @Prop({ type: String, default: null })
   notes!: string | null;
 }

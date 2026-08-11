@@ -63,8 +63,6 @@ export function AddFeedbackModal({
     setSaving(false);
   }, [open, defaultMealId, meals]);
 
-  // Feedback is one-per-meal, so opening the form for a meal that already has
-  // feedback is an edit — load it and prefill rather than starting blank.
   useEffect(() => {
     if (!open || !selectedMeal) return;
 
@@ -89,8 +87,6 @@ export function AddFeedbackModal({
         }
       })
       .catch(() => {
-        // Treat a failed lookup as "no existing feedback" — the save is an upsert
-        // either way, so the worst case is an empty form.
       })
       .finally(() => {
         if (!cancelled) setLoadingExisting(false);

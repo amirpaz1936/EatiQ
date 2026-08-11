@@ -76,14 +76,6 @@ export class UsersService implements OnModuleInit {
     }
   }
 
-  /**
-   * Replaces the old sparse unique `googleId` index with the partial one.
-   *
-   * Mongoose never rebuilds an index that already exists under the same name, even
-   * when its options changed — so the broken sparse version would survive the schema
-   * fix forever and keep rejecting the second email/password signup. Drop it once,
-   * then let the corrected definition build.
-   */
   private async replaceLegacyGoogleIdIndex(): Promise<void> {
     try {
       const indexes = await this.userModel.collection.indexes();
@@ -96,9 +88,6 @@ export class UsersService implements OnModuleInit {
         );
       }
 
-      // Safe to call unconditionally: creating an index that already matches is a
-      // no-op, and the partial filter excludes nulls so the build can't fail on
-      // existing password users.
       await this.userModel.createIndexes();
     } catch (err) {
       this.logger.error(

@@ -14,7 +14,6 @@ import { CreateFeedbackDto } from "./dto/create-feedback.dto";
 export class FeedbackController {
   constructor(private readonly feedbackService: FeedbackService) {}
 
-  // Upsert: posting again for the same meal edits that meal's feedback in place.
   @Post()
   async save(
     @Headers("x-user-id") userId: string | undefined,

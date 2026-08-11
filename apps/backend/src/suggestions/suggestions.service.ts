@@ -78,8 +78,6 @@ export class SuggestionsService implements OnModuleInit {
     const profileAvoid = profile?.avoid ?? "";
     const insightsAvoid = insights?.avoid ?? [];
 
-    // Everything the user must not be served, from both the explicit profile field
-    // and what feedback taught us.
     const avoidTerms = parseAvoidTerms(profileAvoid, insightsAvoid);
 
     const ctx = {
@@ -97,8 +95,6 @@ export class SuggestionsService implements OnModuleInit {
       consumedCaloriesToday,
       feedbackInsights: {
         avoid: insightsAvoid,
-        // Strip conflicts: an inferred "enjoyed"/"reduce" entry must never
-        // contradict an explicit avoid, or the prompt argues with itself.
         reduce: withoutAvoided(insights?.reduce ?? [], avoidTerms),
         enjoyed: withoutAvoided(insights?.enjoyed ?? [], avoidTerms),
         notes: insights?.notes ?? "",
@@ -111,14 +107,6 @@ export class SuggestionsService implements OnModuleInit {
     return result;
   }
 
-  /**
-   * Generates suggestions and enforces the avoid-list on the way out.
-   *
-   * Structured output constrains the *shape* of the response, not its content — the
-   * model can and does slip an avoided ingredient in. One retry usually clears it;
-   * anything still violating is dropped rather than served, so a short list is
-   * possible but a forbidden meal is not.
-   */
   private async generateRespectingAvoidList(
     ctx: Parameters<OpenAISuggestionsClient["suggest"]>[0],
     avoidTerms: string[],
@@ -151,7 +139,6 @@ export class SuggestionsService implements OnModuleInit {
     return { ...retry, suggestions: kept };
   }
 
-  /** Human-readable "<meal name> contains <term>" for each violating suggestion. */
   private violatingSuggestions(
     result: SuggestionsResult,
     avoidTerms: string[],
