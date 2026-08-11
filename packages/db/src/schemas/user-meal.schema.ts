@@ -63,6 +63,9 @@ export class UserMeal {
   @Prop({ type: String, default: null })
   imageUrl!: string | null;
 
+  @Prop({ type: String, default: null })
+  imageObjectKey!: string | null;
+
   @Prop({ type: Date, required: true, index: true })
   eatenAt!: Date;
 

@@ -1,13 +1,14 @@
-import { useState } from "react";
-import type { AnalysisResult, NutritionTotals } from "../../api/scan";
+import { useEffect, useState } from "react";
+import type { NutritionTotals, ScannedMeal } from "../../api/scan";
 import {
   deriveMealName,
   saveMeal,
   type MealRecord,
 } from "../../api/meals";
+import { reviewMeal, type MealReview } from "../../api/meal-review";
 
 type ScanResultsCardProps = {
-  result: AnalysisResult;
+  result: ScannedMeal;
   onClear: () => void;
   onSaved?: (record: MealRecord) => void;
 };
@@ -40,6 +41,39 @@ export function ScanResultsCard({ result, onClear, onSaved }: ScanResultsCardPro
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const [review, setReview] = useState<MealReview | null>(null);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewRequested, setReviewRequested] = useState(false);
+
+  useEffect(() => {
+    if (!hasItems) return;
+
+    let cancelled = false;
+    setReview(null);
+    setReviewError(null);
+    setReviewRequested(false);
+
+    reviewMeal({
+      name: deriveMealName(result.items),
+      totals: result.totals,
+      items: result.items,
+      language: result.language,
+    })
+      .then((next) => {
+        if (!cancelled) setReview(next);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setReviewError(
+          err instanceof Error ? err.message : "Couldn't check this meal",
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [result, hasItems]);
+
   async function handleSave() {
     if (saving || saved) return;
     setSaving(true);
@@ -49,6 +83,7 @@ export function ScanResultsCard({ result, onClear, onSaved }: ScanResultsCardPro
         name: deriveMealName(result.items),
         totals: result.totals,
         items: result.items,
+        imageObjectKey: result.objectKey,
         language: result.language,
         notes: result.notes,
       });
@@ -131,6 +166,22 @@ export function ScanResultsCard({ result, onClear, onSaved }: ScanResultsCardPro
         <p className="mt-4 text-xs text-slate-500">{result.notes}</p>
       )}
 
+      {hasItems && (
+        <div className="mt-5">
+          {reviewRequested ? (
+            <ReviewPanel review={review} error={reviewError} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setReviewRequested(true)}
+              className="w-full rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-medium text-violet-700 transition hover:bg-violet-100"
+            >
+              Check this meal — should you eat it?
+            </button>
+          )}
+        </div>
+      )}
+
       {saveError && (
         <p className="mt-4 text-sm text-rose-700">{saveError}</p>
       )}
@@ -143,6 +194,113 @@ export function ScanResultsCard({ result, onClear, onSaved }: ScanResultsCardPro
       >
         {saveLabel}
       </button>
+
+      <p className="mt-2 text-center text-xs text-slate-400">
+        Saving logs this as a meal you ate.
+      </p>
     </section>
+  );
+}
+
+const VERDICT_STYLES = {
+  ok: {
+    container: "border-emerald-200 bg-emerald-50",
+    badge: "bg-emerald-600 text-white",
+    heading: "text-emerald-900",
+    label: "Good to eat",
+    icon: "✓",
+  },
+  caution: {
+    container: "border-amber-200 bg-amber-50",
+    badge: "bg-amber-500 text-white",
+    heading: "text-amber-900",
+    label: "Eat with care",
+    icon: "!",
+  },
+  avoid: {
+    container: "border-rose-300 bg-rose-50",
+    badge: "bg-rose-600 text-white",
+    heading: "text-rose-900",
+    label: "Better to avoid",
+    icon: "✕",
+  },
+} as const;
+
+function ReviewPanel({
+  review,
+  error,
+}: {
+  review: MealReview | null;
+  error: string | null;
+}) {
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+        {error}
+      </div>
+    );
+  }
+
+  if (!review) {
+    return (
+      <div
+        className="flex items-center gap-3 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-medium text-violet-700"
+        role="status"
+        aria-live="polite"
+      >
+        <span className="size-4 animate-spin rounded-full border-2 border-violet-300 border-t-violet-700" />
+        Checking this meal against your profile…
+      </div>
+    );
+  }
+
+  const style = VERDICT_STYLES[review.verdict];
+
+  return (
+    <div
+      className={`rounded-2xl border px-4 py-3.5 ${style.container}`}
+      role={review.verdict === "avoid" ? "alert" : "status"}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${style.badge}`}
+          aria-hidden
+        >
+          {style.icon}
+        </span>
+        <div className="min-w-0">
+          <p className={`text-sm font-semibold ${style.heading}`}>
+            {style.label}
+          </p>
+          <p className="mt-0.5 text-sm text-slate-700">{review.headline}</p>
+        </div>
+      </div>
+
+      {review.warnings.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {review.warnings.map((warning, idx) => (
+            <li
+              key={`${warning.ingredient}-${idx}`}
+              className="rounded-xl border border-white/80 bg-white/70 px-3 py-2 text-xs"
+            >
+              <span
+                className={`font-semibold ${
+                  warning.severity === "blocking"
+                    ? "text-rose-700"
+                    : "text-amber-700"
+                }`}
+              >
+                {warning.ingredient}
+              </span>
+              <span className="text-slate-700"> — {warning.reason}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {review.notes.trim() && (
+        <p className="mt-3 text-xs italic text-slate-600">{review.notes}</p>
+      )}
+    </div>
   );
 }

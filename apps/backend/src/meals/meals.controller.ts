@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Headers,
+  Param,
   Post,
   Query,
   UnauthorizedException,
@@ -31,5 +32,14 @@ export class MealsController {
   ) {
     if (!userId) throw new UnauthorizedException();
     return this.mealsService.findInRange(userId, query.from, query.to);
+  }
+
+  @Get(":id/image")
+  async image(
+    @Headers("x-user-id") userId: string | undefined,
+    @Param("id") id: string,
+  ) {
+    if (!userId) throw new UnauthorizedException();
+    return { url: await this.mealsService.presignImage(userId, id) };
   }
 }

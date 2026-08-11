@@ -23,6 +23,27 @@ export const DIET_TYPES = [
 export type DietType = (typeof DIET_TYPES)[number];
 
 @Schema({ _id: false })
+export class ManualFeedbackInsights {
+  @Prop({ type: [String], default: [] })
+  avoid!: string[];
+
+  @Prop({ type: [String], default: [] })
+  reduce!: string[];
+
+  @Prop({ type: [String], default: [] })
+  enjoyed!: string[];
+
+  @Prop({ type: [String], default: [] })
+  removed!: string[];
+
+  @Prop({ type: String, default: null })
+  notes!: string | null;
+}
+export const ManualFeedbackInsightsSchema = SchemaFactory.createForClass(
+  ManualFeedbackInsights,
+);
+
+@Schema({ _id: false })
 export class FeedbackInsights {
   @Prop({ type: [String], default: [] })
   avoid!: string[];
@@ -38,6 +59,9 @@ export class FeedbackInsights {
 
   @Prop({ type: Number, default: 0 })
   feedbackCount!: number;
+
+  @Prop({ type: ManualFeedbackInsightsSchema, default: () => ({}) })
+  manual!: ManualFeedbackInsights;
 }
 export const FeedbackInsightsSchema =
   SchemaFactory.createForClass(FeedbackInsights);

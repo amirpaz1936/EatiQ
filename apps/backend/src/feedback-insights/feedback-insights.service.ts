@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { InjectModel } from "@nestjs/mongoose";
 import {
@@ -10,17 +10,22 @@ import {
   UserMealDocument,
 } from "@eatiq/db";
 import { Model, Types } from "mongoose";
-import Redis from "ioredis";
-import { REDIS_CLIENT } from "../redis/redis.module";
+import { SuggestionsCacheService } from "../suggestions/suggestions-cache.service";
 import { OpenAIInsightsClient } from "./openai-insights.client";
 import type { Insights } from "./insights-schema";
 import type { FeedbackEntry } from "./insights-prompt";
+import {
+  applyManualOverrides,
+  deriveOverrides,
+  normalizeInsights,
+  normalizeOverrides,
+  type ManualOverrides,
+} from "./manual-overrides";
 
 // How many recent raw feedbacks we re-feed alongside the running summary on every
 // update. Re-anchoring on the recent window keeps incremental summarization from
 // drifting away from ground truth without a periodic full rebuild.
 const RECENT_WINDOW = 10;
-const MAX_LIST = 20;
 
 const EMPTY_INSIGHTS: Insights = {
   avoid: [],
@@ -36,7 +41,7 @@ export class FeedbackInsightsService implements OnModuleInit {
 
   constructor(
     private readonly config: ConfigService,
-    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    private readonly suggestionsCache: SuggestionsCacheService,
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
     @InjectModel(UserMeal.name)
@@ -60,10 +65,17 @@ export class FeedbackInsightsService implements OnModuleInit {
 
       const feedbacks = await this.feedbackModel
         .find({ userId: objectId })
-        .sort({ createdAt: -1 })
-        .limit(RECENT_WINDOW)
+        .sort({ updatedAt: -1, createdAt: -1 })
         .lean()
-        .exec();
+        .exec()
+        .then((rows) => {
+          const newestPerMeal = new Map<string, (typeof rows)[number]>();
+          for (const row of rows) {
+            const key = String(row.mealId);
+            if (!newestPerMeal.has(key)) newestPerMeal.set(key, row);
+          }
+          return [...newestPerMeal.values()].slice(0, RECENT_WINDOW);
+        });
 
       if (feedbacks.length === 0) return;
 
@@ -94,15 +106,28 @@ export class FeedbackInsightsService implements OnModuleInit {
         };
       });
 
-      const current = this.normalize(profile?.feedbackInsights ?? EMPTY_INSIGHTS);
-      const updated = this.normalize(
+      const manual = normalizeOverrides(profile?.feedbackInsights?.manual);
+      const current = normalizeInsights(
+        profile?.feedbackInsights ?? EMPTY_INSIGHTS,
+      );
+      const generated = normalizeInsights(
         await this.client.summarize({ current, recent }),
       );
+
+      const updated = applyManualOverrides(generated, manual);
 
       await this.profileModel
         .updateOne(
           { userId: objectId },
-          { $set: { feedbackInsights: { ...updated, feedbackCount: totalCount } } },
+          {
+            $set: {
+              feedbackInsights: {
+                ...updated,
+                feedbackCount: totalCount,
+                manual,
+              },
+            },
+          },
           { upsert: true },
         )
         .exec();
@@ -111,7 +136,7 @@ export class FeedbackInsightsService implements OnModuleInit {
         `insights updated user=${userId} count=${totalCount} avoid=${updated.avoid.length} reduce=${updated.reduce.length} enjoyed=${updated.enjoyed.length}`,
       );
 
-      await this.invalidateSuggestions(userId);
+      await this.suggestionsCache.invalidateForUser(userId);
     } catch (err) {
       this.logger.warn(
         `insights refresh failed user=${userId}: ${(err as Error).message}`,
@@ -119,41 +144,49 @@ export class FeedbackInsightsService implements OnModuleInit {
     }
   }
 
-  private normalize(raw: Partial<Insights>): Insights {
-    const clean = (arr: string[] | undefined): string[] => {
-      const seen = new Set<string>();
-      for (const item of arr ?? []) {
-        const v = item.trim().toLowerCase();
-        if (v) seen.add(v);
-      }
-      return [...seen].slice(0, MAX_LIST);
-    };
-    return {
-      avoid: clean(raw.avoid),
-      reduce: clean(raw.reduce),
-      enjoyed: clean(raw.enjoyed),
-      notes: (raw.notes ?? "").trim(),
-    };
-  }
+  async saveManualEdit(
+    userId: string,
+    desired: Partial<Insights>,
+  ): Promise<Insights & { feedbackCount: number; manual: ManualOverrides }> {
+    const objectId = new Types.ObjectId(userId);
 
-  private async invalidateSuggestions(userId: string): Promise<void> {
-    const pattern = `suggestions:${userId}:*`;
-    try {
-      const keys: string[] = [];
-      for await (const batch of this.redis.scanStream({
-        match: pattern,
-        count: 100,
-      })) {
-        keys.push(...(batch as string[]));
-      }
-      if (keys.length > 0) {
-        await this.redis.del(...keys);
-        this.logger.log(`invalidated ${keys.length} suggestion cache key(s) for ${userId}`);
-      }
-    } catch (err) {
-      this.logger.warn(
-        `suggestion cache invalidation failed for ${userId}: ${(err as Error).message}`,
-      );
-    }
+    const profile = await this.profileModel
+      .findOne({ userId: objectId }, { feedbackInsights: 1 })
+      .lean()
+      .exec();
+
+    const current = normalizeInsights(
+      profile?.feedbackInsights ?? EMPTY_INSIGHTS,
+    );
+    const next = normalizeInsights(desired);
+    const manual = deriveOverrides(
+      current,
+      next,
+      normalizeOverrides(profile?.feedbackInsights?.manual),
+    );
+
+    const effective = applyManualOverrides(next, manual);
+    const feedbackCount = profile?.feedbackInsights?.feedbackCount ?? 0;
+
+    await this.profileModel
+      .updateOne(
+        { userId: objectId },
+        {
+          $set: {
+            feedbackInsights: { ...effective, feedbackCount, manual },
+          },
+          $setOnInsert: { userId: objectId },
+        },
+        { upsert: true },
+      )
+      .exec();
+
+    this.logger.log(
+      `insights manually edited user=${userId} pinned=${manual.avoid.length + manual.reduce.length + manual.enjoyed.length} removed=${manual.removed.length}`,
+    );
+
+    await this.suggestionsCache.invalidateForUser(userId);
+
+    return { ...effective, feedbackCount, manual };
   }
 }

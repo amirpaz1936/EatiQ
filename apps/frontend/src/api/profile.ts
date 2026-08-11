@@ -38,3 +38,19 @@ export function updateProfile(patch: ProfilePatch): Promise<ProfileResponse> {
     body: patch,
   });
 }
+
+export type InsightsPatch = {
+  avoid: string[];
+  reduce: string[];
+  enjoyed: string[];
+  notes: string;
+};
+
+export function updateFeedbackInsights(
+  patch: InsightsPatch,
+): Promise<FeedbackInsights> {
+  return apiRequest<FeedbackInsights>("/api/profile/insights", {
+    method: "PATCH",
+    body: patch,
+  });
+}

@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { saveFeedback } from "../../api/feedback";
+import {
+  fetchFeedbackForMeals,
+  saveFeedback,
+  type MealFeedbackRecord,
+} from "../../api/feedback";
 import { ApiError } from "../../api/client";
 import type { MealRecord } from "../../api/meals";
 import type { Sentiment } from "../../types/feedback";
@@ -15,7 +19,14 @@ type AddFeedbackModalProps = {
   onSaved?: () => void;
 };
 
-const timeFormatter = new Intl.DateTimeFormat([], {
+const timeFormatter = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+const stampFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
   hour: "numeric",
   minute: "2-digit",
 });
@@ -40,23 +51,58 @@ export function AddFeedbackModal({
   const [symptomsText, setSymptomsText] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [existing, setExisting] = useState<MealFeedbackRecord | null>(null);
+  const [loadingExisting, setLoadingExisting] = useState(false);
 
   const selectedMeal = meals.find((meal) => meal._id === selectedMealId) ?? meals[0];
 
   useEffect(() => {
     if (!open) return;
     setSelectedMealId(defaultMealId ?? meals[0]?._id ?? "");
-    setFeelingDescription("");
-    setSelectedSentiment(null);
-    setSymptomsText("");
     setError(null);
     setSaving(false);
   }, [open, defaultMealId, meals]);
+
+  useEffect(() => {
+    if (!open || !selectedMeal) return;
+
+    let cancelled = false;
+    const mealId = selectedMeal._id;
+
+    setLoadingExisting(true);
+    setExisting(null);
+    setFeelingDescription("");
+    setSelectedSentiment(null);
+    setSymptomsText("");
+
+    fetchFeedbackForMeals([mealId])
+      .then((rows) => {
+        if (cancelled) return;
+        const current = rows.find((row) => row.mealId === mealId) ?? null;
+        if (current) {
+          setExisting(current);
+          setFeelingDescription(current.feeling);
+          setSelectedSentiment(current.sentiment);
+          setSymptomsText(current.symptoms);
+        }
+      })
+      .catch(() => {
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingExisting(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, selectedMeal?._id]);
 
   const mealSelectOptions = meals.map((meal) => ({
     value: meal._id,
     label: `${meal.name} • ${timeFormatter.format(new Date(meal.eatenAt))}`,
   }));
+
+  const isEditing = existing !== null;
 
   async function handleSaveFeedback() {
     if (!selectedMeal || saving) return;
@@ -85,7 +131,7 @@ export function AddFeedbackModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Add feedback"
+      title={isEditing ? "Edit meal feedback" : "Add meal feedback"}
       footer={
         <>
           <button
@@ -99,10 +145,14 @@ export function AddFeedbackModal({
           <button
             type="button"
             onClick={() => void handleSaveFeedback()}
-            disabled={!selectedMeal || saving}
+            disabled={!selectedMeal || saving || loadingExisting}
             className="min-h-10 touch-manipulation rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saving ? "Saving…" : "Save feedback"}
+            {saving
+              ? "Saving…"
+              : isEditing
+                ? "Update feedback"
+                : "Save feedback"}
           </button>
         </>
       }
@@ -115,10 +165,18 @@ export function AddFeedbackModal({
         ) : (
           <>
             {selectedMeal && (
-              <p className="text-sm text-slate-600">
-                Meal:{" "}
-                <span className="font-medium text-slate-900">{selectedMeal.name}</span>
-              </p>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Feedback for this meal
+                </p>
+                <p className="mt-0.5 text-sm font-semibold text-slate-900">
+                  {selectedMeal.name}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {timeFormatter.format(new Date(selectedMeal.eatenAt))} ·{" "}
+                  {Math.round(selectedMeal.totals.calories)} cal
+                </p>
+              </div>
             )}
 
             {mealSelectOptions.length > 1 && (
@@ -129,6 +187,14 @@ export function AddFeedbackModal({
                 value={selectedMealId}
                 onChange={setSelectedMealId}
               />
+            )}
+
+            {isEditing && existing && (
+              <p className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                You already gave feedback on this meal on{" "}
+                {stampFormatter.format(new Date(existing.updatedAt))}. Saving
+                replaces it — it won't add a second entry.
+              </p>
             )}
 
             <div className="flex flex-col gap-1.5">

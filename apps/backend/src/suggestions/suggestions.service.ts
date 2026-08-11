@@ -1,9 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  OnModuleInit,
-} from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { InjectModel } from "@nestjs/mongoose";
 import {
@@ -13,17 +8,20 @@ import {
   UserMealDocument,
 } from "@eatiq/db";
 import { Model, Types } from "mongoose";
-import Redis from "ioredis";
-import { REDIS_CLIENT } from "../redis/redis.module";
 import { OpenAISuggestionsClient } from "./openai-suggestions.client";
 import type { SuggestionsResult } from "./schema";
+import { SuggestionsCacheService } from "./suggestions-cache.service";
+import {
+  findViolations,
+  parseAvoidTerms,
+  withoutAvoided,
+} from "./avoid-terms.util";
 import {
   isValidTimeZone,
   resolveMealSlot,
   startOfDayInTimeZone,
 } from "./meal-slot.util";
 
-const CACHE_TTL_SECONDS = 2 * 60 * 60; // 2 hours
 const DEFAULT_LANGUAGE = "en";
 
 @Injectable()
@@ -33,7 +31,7 @@ export class SuggestionsService implements OnModuleInit {
 
   constructor(
     private readonly config: ConfigService,
-    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    private readonly cache: SuggestionsCacheService,
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
     @InjectModel(UserMeal.name)
@@ -59,10 +57,10 @@ export class SuggestionsService implements OnModuleInit {
     const cacheKey = `suggestions:${userId}:${slot}:${lang}`;
 
     if (refresh) {
-      await this.cacheDel(cacheKey);
+      await this.cache.del(cacheKey);
       this.logger.log(`cache invalidated ${cacheKey} — refreshing`);
     } else {
-      const cached = await this.cacheGet(cacheKey);
+      const cached = await this.cache.get(cacheKey);
       if (cached) {
         this.logger.log(`cache hit ${cacheKey}`);
         return cached;
@@ -77,13 +75,18 @@ export class SuggestionsService implements OnModuleInit {
     ]);
 
     const insights = profile?.feedbackInsights;
-    const result = await this.client.suggest({
+    const profileAvoid = profile?.avoid ?? "";
+    const insightsAvoid = insights?.avoid ?? [];
+
+    const avoidTerms = parseAvoidTerms(profileAvoid, insightsAvoid);
+
+    const ctx = {
       mealSlot: slot,
       language: lang,
       profile: {
         goal: profile?.goal ?? null,
         dietType: profile?.dietType ?? null,
-        avoid: profile?.avoid ?? "",
+        avoid: profileAvoid,
         notes: profile?.notes ?? "",
         targetCaloriesDaily: profile?.targetCaloriesDaily ?? null,
         heightCm: profile?.heightCm ?? null,
@@ -91,15 +94,59 @@ export class SuggestionsService implements OnModuleInit {
       },
       consumedCaloriesToday,
       feedbackInsights: {
-        avoid: insights?.avoid ?? [],
-        reduce: insights?.reduce ?? [],
-        enjoyed: insights?.enjoyed ?? [],
+        avoid: insightsAvoid,
+        reduce: withoutAvoided(insights?.reduce ?? [], avoidTerms),
+        enjoyed: withoutAvoided(insights?.enjoyed ?? [], avoidTerms),
         notes: insights?.notes ?? "",
       },
+    };
+
+    const result = await this.generateRespectingAvoidList(ctx, avoidTerms);
+
+    await this.cache.set(cacheKey, result);
+    return result;
+  }
+
+  private async generateRespectingAvoidList(
+    ctx: Parameters<OpenAISuggestionsClient["suggest"]>[0],
+    avoidTerms: string[],
+  ): Promise<SuggestionsResult> {
+    const result = await this.client.suggest(ctx);
+    if (avoidTerms.length === 0) return result;
+
+    const offenders = this.violatingSuggestions(result, avoidTerms);
+    if (offenders.length === 0) return result;
+
+    this.logger.warn(
+      `suggestions violated avoid-list (${offenders.join("; ")}) — regenerating once`,
+    );
+
+    const retry = await this.client.suggest({
+      ...ctx,
+      retryViolations: offenders,
     });
 
-    await this.cacheSet(cacheKey, result);
-    return result;
+    const stillOffending = this.violatingSuggestions(retry, avoidTerms);
+    if (stillOffending.length === 0) return retry;
+
+    const kept = retry.suggestions.filter(
+      (s) =>
+        findViolations([s.name, s.description, s.reason], avoidTerms).length === 0,
+    );
+    this.logger.warn(
+      `dropping ${retry.suggestions.length - kept.length} suggestion(s) that still violated the avoid-list`,
+    );
+    return { ...retry, suggestions: kept };
+  }
+
+  private violatingSuggestions(
+    result: SuggestionsResult,
+    avoidTerms: string[],
+  ): string[] {
+    return result.suggestions.flatMap((s) => {
+      const hits = findViolations([s.name, s.description, s.reason], avoidTerms);
+      return hits.length > 0 ? [`"${s.name}" contains ${hits.join(", ")}`] : [];
+    });
   }
 
   private async sumCaloriesSince(
@@ -111,31 +158,5 @@ export class SuggestionsService implements OnModuleInit {
       .lean()
       .exec();
     return meals.reduce((sum, m) => sum + (m.totals?.calories ?? 0), 0);
-  }
-
-  private async cacheGet(key: string): Promise<SuggestionsResult | null> {
-    try {
-      const raw = await this.redis.get(key);
-      return raw ? (JSON.parse(raw) as SuggestionsResult) : null;
-    } catch (err) {
-      this.logger.warn(`Redis GET failed for ${key}: ${(err as Error).message}`);
-      return null;
-    }
-  }
-
-  private async cacheSet(key: string, value: SuggestionsResult): Promise<void> {
-    try {
-      await this.redis.set(key, JSON.stringify(value), "EX", CACHE_TTL_SECONDS);
-    } catch (err) {
-      this.logger.warn(`Redis SET failed for ${key}: ${(err as Error).message}`);
-    }
-  }
-
-  private async cacheDel(key: string): Promise<void> {
-    try {
-      await this.redis.del(key);
-    } catch (err) {
-      this.logger.warn(`Redis DEL failed for ${key}: ${(err as Error).message}`);
-    }
   }
 }

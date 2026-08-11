@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { CameraIcon, UploadIcon } from "../components/icons";
 import { ScanMealModal } from "../components/scan/ScanMealModal";
 import { ScanResultsCard } from "../components/scan/ScanResultsCard";
-import type { AnalysisResult } from "../api/scan";
+import type { ScannedMeal } from "../api/scan";
 
 export function ScanMealPage() {
   const [scanOpen, setScanOpen] = useState(false);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [result, setResult] = useState<ScannedMeal | null>(null);
   const [scanCompleteMessage, setScanCompleteMessage] = useState(false);
 
   useEffect(() => {

@@ -40,3 +40,5 @@ export type MealFeedbackDocument = HydratedDocument<MealFeedback>;
 export const MealFeedbackSchema = SchemaFactory.createForClass(MealFeedback);
 
 MealFeedbackSchema.index({ userId: 1, createdAt: -1 });
+
+MealFeedbackSchema.index({ userId: 1, mealId: 1 }, { unique: true });

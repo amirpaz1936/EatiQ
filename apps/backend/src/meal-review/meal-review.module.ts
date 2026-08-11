@@ -6,9 +6,8 @@ import {
   UserMeal,
   UserMealSchema,
 } from "@eatiq/db";
-import { SuggestionsController } from "./suggestions.controller";
-import { SuggestionsService } from "./suggestions.service";
-import { SuggestionsCacheModule } from "./suggestions-cache.module";
+import { MealReviewController } from "./meal-review.controller";
+import { MealReviewService } from "./meal-review.service";
 
 @Module({
   imports: [
@@ -16,9 +15,8 @@ import { SuggestionsCacheModule } from "./suggestions-cache.module";
       { name: Profile.name, schema: ProfileSchema },
       { name: UserMeal.name, schema: UserMealSchema },
     ]),
-    SuggestionsCacheModule,
   ],
-  controllers: [SuggestionsController],
-  providers: [SuggestionsService],
+  controllers: [MealReviewController],
+  providers: [MealReviewService],
 })
-export class SuggestionsModule {}
+export class MealReviewModule {}

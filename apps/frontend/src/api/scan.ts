@@ -25,6 +25,8 @@ export type AnalysisResult = {
   notes: string;
 };
 
+export type ScannedMeal = AnalysisResult & { objectKey: string };
+
 export type PresignResponse = {
   uploadUrl: string;
   objectKey: string;

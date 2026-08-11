@@ -15,12 +15,12 @@ export class FeedbackController {
   constructor(private readonly feedbackService: FeedbackService) {}
 
   @Post()
-  async create(
+  async save(
     @Headers("x-user-id") userId: string | undefined,
     @Body() dto: CreateFeedbackDto,
   ) {
     if (!userId) throw new UnauthorizedException();
-    return this.feedbackService.create(userId, dto);
+    return this.feedbackService.save(userId, dto);
   }
 
   @Get()
