@@ -19,7 +19,7 @@ export const insightsSchema = z.object({
   notes: z
     .string()
     .describe(
-      "Short free-text (max ~5 sentences) for non-ingredient patterns: meal timing, portion size, preparation, anything that doesn't fit the lists. Empty string if nothing applies.",
+      "A short plain-language summary (1-3 sentences) of what this user's feedback shows so far, written for the user to read. Cover the clearest pattern, how consistent the evidence is, and any factor the lists cannot express such as meal timing, portion size or preparation. Do not just restate the lists. Write something whenever there is any feedback at all; return an empty string only when there is genuinely nothing to say.",
     ),
 });
 
